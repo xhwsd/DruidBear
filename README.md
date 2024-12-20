@@ -1,2 +1,87 @@
-# DaruidBear
-熊德辅助插件
+# 熊德辅助插件
+
+> __自娱自乐，不做任何保证！__  
+> 如遇到BUG可反馈至 xhwsd@qq.com 邮箱
+
+
+## 使用
+- 安装`!Libs`插件
+- 安装[DaruidBear](https://ghgo.xyz/https://github.com/xhwsd/DaruidBear/archive/master.zip)插件
+- 基于插件提供的函数，创建普通或超级宏
+- 将宏图标拖至动作条，然后使用宏
+
+> 请确保插件最新版和已适配乌龟，插件目录如`.\TurtleWOW\AddOns\`
+
+
+## 可用宏
+
+> 推荐使用超级宏（SuperMacro）提供更多宏位
+
+
+### 嘲单
+
+> 使用低吼，并大喊
+
+```
+/script -- CastSpellByName("低吼")
+/script DaruidBear:TauntSingle()
+```
+
+逻辑描述：
+- 使用该宏需确保低吼在动作条任意位置
+- 对目标使用低吼，并大喊
+
+
+### 嘲群
+
+> 使用挑战咆哮，并大喊
+
+```
+/script -- CastSpellByName("挑战咆哮")
+/script DaruidBear:TauntGroup()
+```
+
+
+### 拉单
+
+> 单拉一个目标使用
+
+```
+/script -- CastSpellByName("槌击")
+/script DaruidBear:PullSingle(30, 95)
+```
+
+参数列表：
+- `@param number dying = 30` 濒死；当剩余生命百分比低于或等于时，将尝试保命
+- `@param number healthy = 95` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+
+逻辑描述：
+- 会在健康、无怒气时使用狂怒
+- 会在濒死时使用狂暴回复，并大喊
+- 会对目标使用精灵之火
+
+
+### 拉群
+
+> 群拉多个目标使用
+
+```
+/script -- CastSpellByName("挥击")
+/script DaruidBear:PullGroup(30, 95)
+```
+
+参数列表：
+- `@param number dying = 30` 濒死；当剩余生命百分比低于或等于时，将尝试保命
+- `@param number healthy = 95` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+
+逻辑描述：
+- 会在健康、无怒气时使用狂怒
+- 会在濒死时使用狂暴回复，并大喊
+- 会对目标使用精灵之火
+- 会对目标使用挫志咆哮
+- 会在怒气太多时使用野蛮撕咬
+
+
+## 简单宏
+- `/xd debug` - 开启或关闭调试模式，调试模式下会输出详细信息
+- `/xd level [level]` 设置调试等级，`level`取值`1~3`；设置调试模式下输出等级

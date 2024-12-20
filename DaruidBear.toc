@@ -1,0 +1,9 @@
+## Interface: 11200
+## Title: DaruidBear 熊德
+## Title-zhCN: |CFF33AAFF[德鲁伊]|R熊德辅助插件
+## Notes-zhCN: 适配乌龟服的熊德辅助插件
+## Author: xhwsd@qq.com
+## Version: 1.1.1
+## Dependencies: !Libs
+
+DaruidBear.lua
