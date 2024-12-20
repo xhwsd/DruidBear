@@ -6,6 +6,7 @@
 
 ## 使用
 - 安装`!Libs`插件
+- 可选的，安装[SuperMacro](https://ghgo.xyz/https://github.com/xhwsd/SuperMacro/archive/master.zip)插件
 - 安装[DaruidBear](https://ghgo.xyz/https://github.com/xhwsd/DaruidBear/archive/master.zip)插件
 - 基于插件提供的函数，创建普通或超级宏
 - 将宏图标拖至动作条，然后使用宏
