@@ -1,6 +1,8 @@
 -- 非德鲁伊退出运行
 local _, playerClass = UnitClass("player")
-if playerClass ~= "DRUID" then return end
+if playerClass ~= "DRUID" then
+	return
+end
 
 -- 定义插件
 DaruidBear = AceLibrary("AceAddon-2.0"):new(
@@ -19,48 +21,6 @@ local useGrowlTime = GetTime()
 local useGhallengingRoarTime = GetTime()
 -- 低吼纹理
 local growlTextures = {}
-
--- 取一个数字 1-3
--- 第 1 级：每个用户都应收到的关键信息
--- 第 2 级：用于本地调试（函数调用等）
--- 第 3 级：非常冗长的调试，将转储所有内容和信息
--- 如果设置为 "nil"，则不会收到任何调试信息
-
--- 调试常规
--- @param number level = 3 输出等级；可选值：1~3(从高到低)
--- @param string message 输出信息
--- @param array ... 格式化参数
-local function DebugGeneral(level, message, ...)
-	level = level or 3
-	DaruidBear:CustomLevelDebug(level, 0.75, 0.75, 0.75, nil, 0, message, unpack(arg))
-end
-
--- 调试信息
--- @param number level = 2 输出等级；可选值：1~3(从高到低)
--- @param string message 输出信息
--- @param array ... 格式化参数
-local function DebugInfo(level, message, ...)
-	level = level or 2
-	DaruidBear:CustomLevelDebug(level, 0.0, 1.0, 0.0, nil, 0, message, unpack(arg))
-end
-
--- 调试警告
--- @param number level = 2 输出等级；可选值：1~3(从高到低)
--- @param string message 输出信息
--- @param array ... 格式化参数
-local function DebugWarning(level, message, ...)
-	level = level or 2
-	DaruidBear:CustomLevelDebug(level, 1.0, 1.0, 0.0, nil, 0, message, unpack(arg))
-end
-
--- 调试错误
--- @param number level = 1 输出等级；可选值：1~3(从高到低)
--- @param string message 输出信息
--- @param array ... 格式化参数
-local function DebugError(level, message, ...)
-	level = level or 1
-	DaruidBear:CustomLevelDebug(level, 1.0, 0.0, 0.0, nil, 0, message, unpack(arg))
-end
 
 -- 位与数组
 -- @param table array 数组(索引表）
@@ -235,7 +195,7 @@ end
 -- @return number|nil 插槽索引
 local function MatchSlot(textures)
 	if next(textures) == nil then
-		DebugWarning(2, "匹配法术插槽的纹理为空")
+		DaruidBear:LevelDebug(2, "匹配法术插槽的纹理为空")
 		return
 	end
 
@@ -256,7 +216,7 @@ local function MatchSlot(textures)
 			return index
 		end
 	end
-	DebugWarning(2, "匹配法术插槽失败；纹理：%s", textures)
+	DaruidBear:LevelDebug(2, "匹配法术插槽失败；纹理：%s", textures)
 end
 
 -- 检验单位是否在范围
@@ -320,50 +280,44 @@ end
 -- 插件载入
 function DaruidBear:OnInitialize()
 	-- 自定义标题，以便调试输出
-	self.title = "XD"
+	self.title = "熊德辅助"
 	-- 开启调试
 	self:SetDebugging(true)
 	-- 输出1~2级调试
 	self:SetDebugLevel(2)
-
-	-- 注册命令
-	self:RegisterChatCommand({'/DaruidBear', "/XD"}, {
-		type = "group",
-		args = {
-			level = {
-				name = "level",
-				desc = "调试等级",
-				type = "toggle",
-				get = "GetDebugLevel",
-				set = "SetDebugLevel",
-			},
-			test = {
-				name = "test",
-				desc = "执行测试",
-				type = "execute",
-				func = function ()
-					print("[XD] 测试开始")
-					DaruidBear:Test()
-					print("[XD] 测试结束")
-				end
-			},
-		},
-	})
 end
 
 -- 插件打开
 function DaruidBear:OnEnable()
+	self:LevelDebug(3, "插件打开")
 
+	-- 注册命令
+	self:RegisterChatCommand({"/XDFZ", '/DaruidBear'}, {
+		type = "group",
+		args = {
+			tsms = {
+				name = "调试模式",
+				desc = "开启或关闭调试模式",
+				type = "toggle",
+				get = "IsDebugging",
+				set = "SetDebugging"
+			},
+			tsdj = {
+				name = "调试等级",
+				desc = "设置或获取调试等级",
+				type = "range",
+				min = 1,
+				max = 3,
+				get = "GetDebugLevel",
+				set = "SetDebugLevel"
+			}
+		},
+	})
 end
 
 -- 插件关闭
 function DaruidBear:OnDisable()
-
-end
-
--- 测试
-function DaruidBear:Test()
-
+	self:LevelDebug(3, "插件关闭")
 end
 
 -- 嘲单
