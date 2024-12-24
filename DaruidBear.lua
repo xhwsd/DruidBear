@@ -23,9 +23,9 @@ local useGhallengingRoarTime = GetTime()
 local growlTextures = {}
 
 -- 位与数组
--- @param table array 数组(索引表）
--- @param string|number data 数据
--- @return number 成功返回索引，失败返回nil
+---@param array table  数组(索引表）
+---@param data any 数据
+---@return number index 成功返回索引，失败返回空
 local function InArray(array, data)
 	if type(array) == "table" then
 		for index, value in ipairs(array) do
@@ -36,17 +36,17 @@ local function InArray(array, data)
 	end
 end
 
--- 自动攻击
+---自动攻击
 local function AutoAttack()
 	if not PlayerFrame.inCombat then
 		CastSpellByName("攻击")
 	end
 end
 
--- 取生命损失
--- @param string unit = "player" 单位
--- @return number 生命损失百分比
--- @return number 生命损失
+---取生命损失
+---@param unit? string 单位
+---@return integer percentage 生命损失百分比
+---@return integer lose 生命损失
 local function HealthLose(unit)
 	unit = unit or "player"
 
@@ -56,10 +56,10 @@ local function HealthLose(unit)
 	return math.floor(lose / max * 100), lose
 end
 
--- 取生命剩余
--- @param string unit = "player" 单位
--- @return number 生命剩余百分比
--- @return number 生命剩余
+---取生命剩余
+---@param unit? string 单位
+---@return integer percentage 生命剩余百分比
+---@return integer residual 生命剩余
 local function HealthResidual(unit)
 	unit = unit or "player"
 
@@ -68,11 +68,11 @@ local function HealthResidual(unit)
 	return math.floor(residual / UnitHealthMax(unit) * 100), residual
 end
 
--- 查询效果；查询单位指定效果是否存在
--- @param string buff 效果名称
--- @param string unit = "player" 目标单位；额外还支持`mainhand`、`offhand`
--- @return string|nil 效果类型；可选值：`mainhand`、`offhand`、`buff`、`debuff`
--- @return number 效果索引；从1开始
+---查询效果；查询单位指定效果是否存在
+---@param buff string 效果名称
+---@param unit string 目标单位；额外还支持`mainhand`、`offhand`
+---@return string kind 效果类型；可选值：`mainhand`、`offhand`、`buff`、`debuff`
+---@return integer index 效果索引；从1开始
 local function FindBuff(buff, unit)
 	if not buff then return end
 	unit = unit or "player"
@@ -123,8 +123,8 @@ local function FindBuff(buff, unit)
 end
 
 -- 法术就绪；检验法术的冷却时间是否结束
--- @param string spell 法术名称
--- @return boolean 已就绪返回true，否则返回false
+---@param spell string  法术名称
+---@return boolean ready 已就绪返回真，否则返回假
 local function SpellReady(spell)
 	if not spell then return false end
 
@@ -149,10 +149,10 @@ local function SpellReady(spell)
 	return false    
 end
 
--- 准备法术纹理
--- @param table textures 法术纹理；非空表直接返回，可将变量定义到程序集作用域
--- @param string 法术名称
--- @return table 成功返回非空表，否则返回空表
+---准备法术纹理
+---@param textures table 法术纹理；非空表直接返回，可将变量定义到程序集作用域
+---@param ... string 法术名称
+---@return table textures 成功返回非空表，否则返回空表
 local function SpellTextures(textures, ...)
 	if next(textures) then return textures end
 
@@ -180,9 +180,9 @@ local function SpellTextures(textures, ...)
 	return textures
 end
 
--- 取插槽法术纹理
--- @param number slot 插槽索引
--- @return string|null 成功返回纹理，失败返回nil
+---取插槽法术纹理
+---@param slot integer 插槽索引
+---@return string|nil textur 成功返回纹理，失败返回空
 local function GetSlotSpellTexture(slot)
 	-- 普通法术有纹理，但没有文本
 	if HasAction(slot) and not GetActionText(slot) then
@@ -190,9 +190,9 @@ local function GetSlotSpellTexture(slot)
 	end
 end
 
--- 根据法术纹理匹配插槽
--- @param table textures 纹理数据，`SpellTextures()`返回的结果
--- @return number|nil 插槽索引
+---根据法术纹理匹配插槽
+---@param textures table 纹理数据，`SpellTextures()`返回的结果
+---@return integer|nil index 插槽索引
 local function MatchSlot(textures)
 	if next(textures) == nil then
 		DaruidBear:LevelDebug(2, "匹配法术插槽的纹理为空")
@@ -219,10 +219,10 @@ local function MatchSlot(textures)
 	DaruidBear:LevelDebug(2, "匹配法术插槽失败；纹理：%s", textures)
 end
 
--- 检验单位是否在范围
--- @param string unit = "target" 单位名称
--- @param table textures = {} 法术纹理，`SpellTextures()`返回结果
--- @return boolean 范围内返回true，范围外返回false
+---检验单位是否在范围
+---@param unit? string 单位名称
+---@param textures table 法术纹理，`SpellTextures()`返回结果
+---@return boolean satisfy 范围内返回真，范围外返回假
 local function IsRange(unit, textures)
 	unit = unit or "target"
 	textures = textures or {}
@@ -277,7 +277,7 @@ local function IsRange(unit, textures)
 	return CheckInteractDistance(unit, 1) == 1
 end
 
--- 插件载入
+---插件载入
 function DaruidBear:OnInitialize()
 	-- 自定义标题，以便调试输出
 	self.title = "熊德辅助"
@@ -287,7 +287,7 @@ function DaruidBear:OnInitialize()
 	self:SetDebugLevel(2)
 end
 
--- 插件打开
+---插件打开
 function DaruidBear:OnEnable()
 	self:LevelDebug(3, "插件打开")
 
@@ -315,12 +315,12 @@ function DaruidBear:OnEnable()
 	})
 end
 
--- 插件关闭
+---插件关闭
 function DaruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
 end
 
--- 嘲单
+---嘲单
 function DaruidBear:TauntSingle()
 	-- 自动攻击
 	AutoAttack()
@@ -339,7 +339,7 @@ function DaruidBear:TauntSingle()
 	end
 end
 
--- 群嘲
+---群嘲
 function DaruidBear:TauntGroup()
 	-- 自动攻击
 	AutoAttack()
@@ -356,9 +356,9 @@ function DaruidBear:TauntGroup()
 	end
 end
 
--- 拉单
--- @param number dying = 30 濒死；当剩余生命百分比低于或等于时，将尝试保命
--- @param number dying = 95 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+---拉单
+---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命
+---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
 function DaruidBear:PullSingle(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
@@ -391,9 +391,9 @@ function DaruidBear:PullSingle(dying, healthy)
 	end
 end
 
--- 拉群
--- @param number dying = 30 濒死；当剩余生命百分比低于或等于时，将尝试保命
--- @param number healthy = 95 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+---拉群
+---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命
+---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
 function DaruidBear:PullGroup(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
