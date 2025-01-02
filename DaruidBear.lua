@@ -44,7 +44,7 @@ local function AutoAttack()
 end
 
 ---取生命损失
----@param unit? string 单位
+---@param unit? string 单位；缺省为`player`
 ---@return integer percentage 生命损失百分比
 ---@return integer lose 生命损失
 local function HealthLose(unit)
@@ -57,7 +57,7 @@ local function HealthLose(unit)
 end
 
 ---取生命剩余
----@param unit? string 单位
+---@param unit? string 单位；缺省为`player`
 ---@return integer percentage 生命剩余百分比
 ---@return integer residual 生命剩余
 local function HealthResidual(unit)
@@ -70,12 +70,15 @@ end
 
 ---查询效果；查询单位指定效果是否存在
 ---@param buff string 效果名称
----@param unit string 目标单位；额外还支持`mainhand`、`offhand`
+---@param unit string 目标单位；额外还支持`mainhand`、`offhand`；缺省为`player`
 ---@return string kind 效果类型；可选值：`mainhand`、`offhand`、`buff`、`debuff`
 ---@return integer index 效果索引；从1开始
 local function FindBuff(buff, unit)
-	if not buff then return end
 	unit = unit or "player"
+
+	if not buff then
+		return
+	end
 
 	-- 适配单位
 	DaruidBearTooltip:SetOwner(UIParent, "ANCHOR_NONE")
@@ -126,7 +129,9 @@ end
 ---@param spell string  法术名称
 ---@return boolean ready 已就绪返回真，否则返回假
 local function SpellReady(spell)
-	if not spell then return false end
+	if not spell then
+		return false
+	end
 
 	-- 名称到索引
 	local index = 1

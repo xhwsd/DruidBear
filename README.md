@@ -43,12 +43,12 @@
 
 ```
 /script -- CastSpellByName("槌击")
-/script DaruidBear:PullSingle(30, 95)
+/script DaruidBear:PullSingle()
 ```
 
 参数列表：
-- `@param dying? integer` 濒死；当剩余生命百分比低于或等于时，将尝试保命
-- `@param healthy? integer` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+- `@param dying? integer` 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
+- `@param healthy? integer` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
 
 逻辑描述：
 - 会在健康、无怒气时使用狂怒
@@ -66,8 +66,8 @@
 ```
 
 参数列表：
-- `@param dying? integer` 濒死；当剩余生命百分比低于或等于时，将尝试保命
-- `@param healthy? integer` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+- `@param dying? integer` 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
+- `@param healthy? integer` 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
 
 逻辑描述：
 - 会在健康、无怒气时使用狂怒
