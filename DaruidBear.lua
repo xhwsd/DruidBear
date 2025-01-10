@@ -12,30 +12,6 @@ DaruidBear = AceLibrary("AceAddon-2.0"):new(
 	"AceDebug-2.0"
 )
 
--- 标签
-local DaruidBearTooltip = CreateFrame("GameTooltip", "DaruidBearTooltip", nil, "GameTooltipTemplate")
-
--- 使用低吼时间
-local useGrowlTime = GetTime()
--- 使用挑战咆哮时间
-local useGhallengingRoarTime = GetTime()
--- 低吼纹理
-local growlTextures = {}
-
--- 位与数组
----@param array table  数组(索引表）
----@param data any 数据
----@return number index 成功返回索引，失败返回空
-local function InArray(array, data)
-	if type(array) == "table" then
-		for index, value in ipairs(array) do
-			if value == data then
-				return index
-			end
-		end
-	end
-end
-
 ---自动攻击
 local function AutoAttack()
 	if not PlayerFrame.inCombat then
@@ -43,17 +19,13 @@ local function AutoAttack()
 	end
 end
 
----取生命损失
+---是否具有光环
+---@param aura string 光环名称
 ---@param unit? string 单位；缺省为`player`
----@return integer percentage 生命损失百分比
----@return integer lose 生命损失
-local function HealthLose(unit)
+---@return boolean has 光环存在返回真，否则返回假
+local function HasAura(aura, unit)
 	unit = unit or "player"
-
-	local max = UnitHealthMax(unit)
-	local lose = max - UnitHealth(unit)
-	-- 百分比 = 部分 / 整体 * 100
-	return math.floor(lose / max * 100), lose
+	return UnitHasAura(unit, aura)
 end
 
 ---取生命剩余
@@ -62,233 +34,18 @@ end
 ---@return integer residual 生命剩余
 local function HealthResidual(unit)
 	unit = unit or "player"
-
 	local residual = UnitHealth(unit)
 	-- 百分比 = 部分 / 整体 * 100
 	return math.floor(residual / UnitHealthMax(unit) * 100), residual
 end
 
----查询效果；查询单位指定效果是否存在
----@param buff string 效果名称
----@param unit string 目标单位；额外还支持`mainhand`、`offhand`；缺省为`player`
----@return string kind 效果类型；可选值：`mainhand`、`offhand`、`buff`、`debuff`
----@return integer index 效果索引；从1开始
-local function FindBuff(buff, unit)
-	unit = unit or "player"
-
-	if not buff then
-		return
-	end
-
-	-- 适配单位
-	DaruidBearTooltip:SetOwner(UIParent, "ANCHOR_NONE")
-	if string.lower(unit) == "mainhand" then
-		-- 主手
-		DaruidBearTooltip:ClearLines()
-		DaruidBearTooltip:SetInventoryItem("player", GetInventorySlotInfo("MainHandSlot"));
-		for index = 1, DaruidBearTooltip:NumLines() do
-			if string.find((getglobal("DaruidBearTooltipTextLeft" .. index):GetText() or ""), buff) then
-				return "mainhand", index
-			end
-		end
-	elseif string.lower(unit) == "offhand" then
-		-- 副手
-		DaruidBearTooltip:ClearLines()
-		DaruidBearTooltip:SetInventoryItem("player", GetInventorySlotInfo("SecondaryHandSlot"))
-		for index = 1, DaruidBearTooltip:NumLines() do
-			if string.find((getglobal("DaruidBearTooltipTextLeft" .. index):GetText() or ""), buff) then
-				return "offhand", index
-			end
-		end
-	else
-		-- 增益
-		local index = 1
-		while UnitBuff(unit, index) do 
-			DaruidBearTooltip:ClearLines()
-			DaruidBearTooltip:SetUnitBuff(unit, index)
-			if string.find(DaruidBearTooltipTextLeft1:GetText() or "", buff) then
-				return "buff", index
-			end
-			index = index + 1
-		end
-
-		-- 减益
-		local index = 1
-		while UnitDebuff(unit, index) do
-			DaruidBearTooltip:ClearLines()
-			DaruidBearTooltip:SetUnitDebuff(unit, index)
-			if string.find(DaruidBearTooltipTextLeft1:GetText() or "", buff) then
-				return "debuff", index
-			end
-			index = index + 1
-		end
-	end
-end
-
--- 法术就绪；检验法术的冷却时间是否结束
----@param spell string  法术名称
----@return boolean ready 已就绪返回真，否则返回假
-local function SpellReady(spell)
-	if not spell then
-		return false
-	end
-
-	-- 名称到索引
-	local index = 1
-	while true do
-		-- 取法术名称
-		local name = GetSpellName(index, BOOKTYPE_SPELL)
-		if not name or name == "" or name == "充能点" then
-			break
-		end
-
-		-- 比对名称
-		if name == spell then
-			-- 取法术冷却
-			return GetSpellCooldown(index, "spell") == 0
-		end
-
-		-- 索引递增
-		index = index + 1
-	end
-	return false    
-end
-
----准备法术纹理
----@param textures table 法术纹理；非空表直接返回，可将变量定义到程序集作用域
----@param ... string 法术名称
----@return table textures 成功返回非空表，否则返回空表
-local function SpellTextures(textures, ...)
-	if next(textures) then return textures end
-
-	-- 遍历法术
-	local index = 1
-	while true do
-		-- 取法术名称
-		local name = GetSpellName(index, BOOKTYPE_SPELL)
-		if not name or name == "" or name == "充能点" then
-			break
-		end
-
-		-- 匹配法术
-		if InArray(arg, name) then
-			-- 取法术纹理
-			local texture = GetSpellTexture(index, BOOKTYPE_SPELL)
-			if not textures[texture] then
-				textures[texture] = {spell = name}
-			end
-		end
-
-		-- 递增索引
-		index = index + 1
-	end
-	return textures
-end
-
----取插槽法术纹理
----@param slot integer 插槽索引
----@return string|nil textur 成功返回纹理，失败返回空
-local function GetSlotSpellTexture(slot)
-	-- 普通法术有纹理，但没有文本
-	if HasAction(slot) and not GetActionText(slot) then
-		return GetActionTexture(slot)
-	end
-end
-
----根据法术纹理匹配插槽
----@param textures table 纹理数据，`SpellTextures()`返回的结果
----@return integer|nil index 插槽索引
-local function MatchSlot(textures)
-	if next(textures) == nil then
-		DaruidBear:LevelDebug(2, "匹配法术插槽的纹理为空")
-		return
-	end
-
-	-- 先看纹理数据中插槽
-	for texture, data in pairs(textures) do
-		-- 插槽还是该纹理
-		if data.slot and GetSlotSpellTexture(data.slot) == texture then
-			return data.slot
-		end
-	end
-
-	--- 从动作条插槽中查找
-	for index = 1, 120 do
-		-- 普通法术没有文本
-		local texture = GetSlotSpellTexture(index)
-		if texture and textures[texture] then
-			textures[texture].slot = index
-			return index
-		end
-	end
-	DaruidBear:LevelDebug(2, "匹配法术插槽失败；纹理：%s", textures)
-end
-
----检验单位是否在范围
----@param unit? string 单位名称
----@param textures table 法术纹理，`SpellTextures()`返回结果
----@return boolean satisfy 范围内返回真，范围外返回假
-local function IsRange(unit, textures)
-	unit = unit or "target"
-	textures = textures or {}
-
-	-- 单位不存在
-	if not UnitExists(unit) then
-		return false
-	end
-
-	-- 目标为自己
-	if UnitIsUnit(unit, "player") then
-		return true
-	end
-
-	-- 客户端不可见
-	if not UnitIsVisible(unit) then
-		return false
-	end
-
-	-- 法术范围
-	if next(textures) then
-		-- 匹配插槽
-		local slot = MatchSlot(textures)
-		if slot then
-			-- 无目标
-			local target = 0
-			if UnitIsUnit(unit, "target") then
-				-- 相同目标
-				target = 2
-			elseif UnitExists("target") then
-				-- 其他目标
-				target = 1
-				TargetUnit(unit)
-			end
-
-			-- 检验目标是否在动作范围内
-			local satisfy = IsActionInRange(slot) == 1
-
-			-- 恢复目标
-			if target == 0 then
-				-- 清除目标
-				ClearTarget()
-			elseif target == 1 then
-				-- 其他目标
-				TargetLastTarget()
-			end
-			return satisfy
-		end
-	end
-
-	-- 决斗范围内（10码）
-	return CheckInteractDistance(unit, 1) == 1
-end
-
 ---插件载入
 function DaruidBear:OnInitialize()
-	-- 自定义标题，以便调试输出
+	-- 几标题，以便调试输出
 	self.title = "熊德辅助"
 	-- 开启调试
 	self:SetDebugging(true)
-	-- 输出1~2级调试
+	-- 调试等级
 	self:SetDebugLevel(2)
 end
 
@@ -318,6 +75,45 @@ function DaruidBear:OnEnable()
 			}
 		},
 	})
+
+	-- 法术检查
+	self.spellCheck = AceLibrary("SpellCheck-1.0")
+	-- 法术插槽
+	self.spellSlot = AceLibrary("SpellSlot-1.0")
+	-- 目标切换
+	self.targetSwitch = AceLibrary("TargetSwitch-1.0")
+
+	-- 使用低吼时间
+	self.useGrowlTime = GetTime()
+	-- 使用挑战咆哮时间
+	self.useGhallengingRoarTime = GetTime()
+
+	-- 施放法术
+	self.castSpells = {}
+
+	-- 监听战斗日志
+	self.parser = ParserLib:GetInstance("1.1")
+	self.parser:RegisterEvent(
+		"DaruidBear",
+		"CHAT_MSG_SPELL_SELF_DAMAGE",
+		function(event, info)
+			self:SELF_DAMAGE(event, info)
+		end
+	)
+	self.parser:RegisterEvent(
+		"DaruidBear",
+		"CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF",
+		function(event, info)
+			self:SELF_DAMAGE(event, info)
+		end
+	)
+	self.parser:RegisterEvent(
+		"DaruidBear",
+		"CHAT_MSG_SPELL_FAILED_LOCALPLAYER",
+		function(event, info)
+			self:SPELL_FAILED(event, info)
+		end
+	)
 end
 
 ---插件关闭
@@ -325,45 +121,137 @@ function DaruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
 end
 
+---大喊
+---@param message string 信息
+---@param...? any 格式化参数
+function DaruidBear:Yell(message, ...)
+	if arg.n > 0 then
+		message = string.format(message, unpack(arg))
+	end
+	SendChatMessage(message, "YELL")
+end
+
+---说话
+---@param message string 信息
+---@param...? any 格式化参数
+function DaruidBear:Say(message, ...)
+	if arg.n > 0 then
+		message = string.format(message, unpack(arg))
+	end
+	SendChatMessage(message, "SAY")
+end
+
+-- 自身施法成功（包括躲闪、抵抗、击中）
+function DaruidBear:SELF_DAMAGE(event, info)
+	self:LevelDebug(3, "自身施法成功；法术：%s；目标：%s；类型：%s；失效：%s", info.skill or "", info.victim or "", info.type or "", info.missType or "")
+	local victim = self.castSpells[info.skill]
+	if victim and info.victim == victim then
+		if info.type == "hit" or info.type == "cast" then
+			self:Say("<%s>已作用于<%s>！", info.skill, info.victim)
+		elseif info.type == "miss" then
+			local types = {
+				resist = "抵抗",
+				immune = "免疫",
+				block = "阻挡",
+				deflect = "偏移",
+				dodge = "躲闪",
+				evade = "回避",
+				absorb = "吸收",
+				parry = "招架",
+				reflect = "反射",
+			}
+			if types[info.missType] then
+				self:Yell("<%s>被<%s>%s！", info.skill, info.victim, types[info.missType])
+			else
+				self:Yell("<%s>未作用于<%s>！", info.skill, info.victim)
+			end
+		elseif info.type == "leech" then
+			self:Yell("<%s>被<%s>吸收！", info.skill, info.victim)
+		elseif info.type == "dispel" then
+			self:Yell("<%s>被<%s>驱散！", info.skill, info.victim)
+		else
+			self:Yell("<%s>未生效于<%s>！", info.skill, info.victim)
+		end
+		self.castSpells[info.skill] = nil
+	end
+end
+
+-- 自身施法失败
+function DaruidBear:SPELL_FAILED(event, info)
+	-- self:LevelDebug(3, "自身施法失败；法术：%s；目标：%s；类型：%s", info.skill or "nil", info.victim or "nil", info.type or "nil")
+end
+
+---检验单位是否在范围
+---@param unit? string 单位名称；缺省为`target`
+---@param spell? string 法术名称；缺省为`低吼`
+---@return boolean satisfy 范围内返回真，范围外返回假
+function DaruidBear:IsRange(unit, spell)
+	unit = unit or "target"
+	spell = spell or "低吼"
+
+	-- 单位不存在
+	if not UnitExists(unit) then
+		return false
+	end
+
+	-- 目标为自己
+	if UnitIsUnit(unit, "player") then
+		return true
+	end
+
+	-- 客户端不可见
+	if not UnitIsVisible(unit) then
+		return false
+	end
+
+	-- 取动作插槽
+	local slot = self.spellSlot:FindSpell(spell)
+	if slot then
+		if self.targetSwitch:ToUnit(unit) then
+			local satisfy = IsActionInRange(slot) == 1
+			self.targetSwitch:ToLast()
+			return satisfy
+		else
+			self:LevelDebug(2, "切换到单位失败；单位：%s", unit)
+		end
+	else
+		self:LevelDebug(2, "未在动作条找到法术；法术：%s", spell)
+	end
+
+	-- 决斗范围内（10码）
+	return CheckInteractDistance(unit, 1) == 1
+end
+
 ---嘲单
 function DaruidBear:TauntSingle()
 	-- 自动攻击
 	AutoAttack()
 
-	-- 使用间隔、技能就绪、可以攻击
-	if GetTime() - useGrowlTime >= 2 and SpellReady("低吼") and UnitCanAttack("player", "target") then
-		-- IsUsableAction 判断插槽是否可以使用
-		-- 法术范围内
-		growlTextures = SpellTextures(growlTextures, "低吼")
-		if IsRange("target", growlTextures) then
-			-- 使用法术
-			CastSpellByName("低吼")
-			SendChatMessage("已对<%t>使用<低吼>！", "YELL")
-			useGrowlTime = GetTime()
-		end
+	-- 使用间隔、技能就绪、可以攻击、目标在范围内
+	if GetTime() - self.useGrowlTime >= 2 and self.spellCheck:IsReady("低吼") and UnitCanAttack("player", "target") and self:IsRange("target", "低吼") then
+		-- 仅通过这里施放的低吼后续才处理
+		self.castSpells["低吼"] = UnitName("target")
+		CastSpellByName("低吼")
+		self.useGrowlTime = GetTime()
 	end
 end
 
----群嘲
+---嘲群
 function DaruidBear:TauntGroup()
 	-- 自动攻击
 	AutoAttack()
 
 	-- 使用间隔、技能就绪、魔力足够
-	if GetTime() - useGhallengingRoarTime >= 2 and SpellReady("挑战咆哮") then
-		if UnitMana("player") >= 15 then
-			CastSpellByName("挑战咆哮")
-			SendChatMessage("已对周围使用<挑战咆哮>！", "YELL")
-			useGhallengingRoarTime = GetTime()
-		else
-			UIErrorsFrame:AddMessage("怒气不足", 1.0, 1.0, 0.0, 53, 5)
-		end
+	if GetTime() - self.useGhallengingRoarTime >= 2 and self.spellCheck:IsReady("挑战咆哮") and UnitMana("player") >= 15 then
+		CastSpellByName("挑战咆哮")
+		SendChatMessage("对周围使用<挑战咆哮>成功！", "YELL")
+		self.useGhallengingRoarTime = GetTime()
 	end
 end
 
 ---拉单
----@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命
----@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
+---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
 function DaruidBear:PullSingle(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
@@ -374,20 +262,20 @@ function DaruidBear:PullSingle(dying, healthy)
 	-- 抉择
 	local residual = HealthResidual("player")
 	local mana = UnitMana("player")
-	if SpellReady("狂暴回复") and not FindBuff("狂暴回复") and residual <= dying then
+	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
 		-- 回生命
 		CastSpellByName("狂暴回复")
 		SendChatMessage("危急濒死，已使用<狂暴回复>！", "YELL")
-	elseif SpellReady("狂怒") and (FindBuff("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
+	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
 		-- 涨怒气
 		CastSpellByName("狂怒")
-	elseif SpellReady("狂暴") and (FindBuff("狂暴回复") or residual <= dying) then
+	elseif self.spellCheck:IsReady("狂暴") and (HasAura("狂暴回复") or residual <= dying) then
 		-- 提生命上限
 		CastSpellByName("狂暴")
-	elseif SpellReady("野蛮撕咬") and (FindBuff("节能施法") or (mana >= 40 and not FindBuff("狂暴回复"))) then
+	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 40 and not HasAura("狂暴回复"))) then
 		-- 怒气过多
 		CastSpellByName("野蛮撕咬")
-	elseif SpellReady("精灵之火（野性）") then
+	elseif self.spellCheck:IsReady("精灵之火（野性）") then
 		-- 骗节能
 		CastSpellByName("精灵之火（野性）")
 	else
@@ -397,38 +285,38 @@ function DaruidBear:PullSingle(dying, healthy)
 end
 
 ---拉群
----@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命
----@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气
+---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
+---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
 function DaruidBear:PullGroup(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
 
 	-- 自动攻击
 	AutoAttack()
-
+	
 	-- 抉择
 	local residual = HealthResidual("player")
 	local mana = UnitMana("player")
-	if SpellReady("狂暴回复") and not FindBuff("狂暴回复") and residual <= dying then
+	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
 		-- 回生命
 		CastSpellByName("狂暴回复")
 		SendChatMessage("危急濒死，已使用<狂暴回复>！", "YELL")
-	elseif SpellReady("狂怒") and (FindBuff("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
+	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
 		-- 涨怒气
 		CastSpellByName("狂怒")
-	elseif SpellReady("狂暴") and (FindBuff("狂暴回复") or residual <= dying) then
+	elseif self.spellCheck:IsReady("狂暴") and (HasAura("狂暴回复") or residual <= dying) then
 		-- 提生命上限
 		CastSpellByName("狂暴")
-	elseif SpellReady("野蛮撕咬") and (FindBuff("节能施法") or (mana >= 80 and not FindBuff("狂暴回复"))) then
+	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 80 and not HasAura("狂暴回复"))) then
 		-- 怒气太多
 		CastSpellByName("野蛮撕咬")
-	elseif mana >= 40 and not FindBuff("狂暴回复") then
+	elseif mana >= 40 and not HasAura("狂暴回复") then
 		-- 怒气过多
 		CastSpellByName("槌击")
-	elseif mana >= 10 and not FindBuff("挫志咆哮", "target") and not FindBuff("挫志怒吼", "target") then
+	elseif mana >= 10 and not HasAura("挫志咆哮", "target") and not HasAura("挫志怒吼", "target") then
 		-- 上减益
 		CastSpellByName("挫志咆哮")
-	elseif SpellReady("精灵之火（野性）") then
+	elseif self.spellCheck:IsReady("精灵之火（野性）") then
 		-- 骗节能
 		CastSpellByName("精灵之火（野性）") 
 	else
