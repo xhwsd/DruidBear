@@ -121,16 +121,6 @@ function DaruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
 end
 
----大喊
----@param message string 信息
----@param...? any 格式化参数
-function DaruidBear:Yell(message, ...)
-	if arg.n > 0 then
-		message = string.format(message, unpack(arg))
-	end
-	SendChatMessage(message, "YELL")
-end
-
 ---说话
 ---@param message string 信息
 ---@param...? any 格式化参数
@@ -139,6 +129,16 @@ function DaruidBear:Say(message, ...)
 		message = string.format(message, unpack(arg))
 	end
 	SendChatMessage(message, "SAY")
+end
+
+---大喊
+---@param message string 信息
+---@param...? any 格式化参数
+function DaruidBear:Yell(message, ...)
+	if arg.n > 0 then
+		message = string.format(message, unpack(arg))
+	end
+	SendChatMessage(message, "YELL")
 end
 
 -- 自身施法成功（包括躲闪、抵抗、击中）
@@ -244,7 +244,7 @@ function DaruidBear:TauntGroup()
 	-- 使用间隔、技能就绪、魔力足够
 	if GetTime() - self.useGhallengingRoarTime >= 2 and self.spellCheck:IsReady("挑战咆哮") and UnitMana("player") >= 15 then
 		CastSpellByName("挑战咆哮")
-		SendChatMessage("对周围使用<挑战咆哮>成功！", "YELL")
+		self:Say("对周围使用<挑战咆哮>成功！")
 		self.useGhallengingRoarTime = GetTime()
 	end
 end
@@ -265,7 +265,7 @@ function DaruidBear:PullSingle(dying, healthy)
 	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
 		-- 回生命
 		CastSpellByName("狂暴回复")
-		SendChatMessage("危急濒死，已使用<狂暴回复>！", "YELL")
+		self:Yell("危急濒死，已使用<狂暴回复>！")
 	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
 		-- 涨怒气
 		CastSpellByName("狂怒")
@@ -300,7 +300,7 @@ function DaruidBear:PullGroup(dying, healthy)
 	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
 		-- 回生命
 		CastSpellByName("狂暴回复")
-		SendChatMessage("危急濒死，已使用<狂暴回复>！", "YELL")
+		self:Yell("危急濒死，已使用<狂暴回复>！")
 	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
 		-- 涨怒气
 		CastSpellByName("狂怒")
