@@ -12,6 +12,71 @@ DaruidBear = AceLibrary("AceAddon-2.0"):new(
 	"AceDebug-2.0"
 )
 
+-- [ GetCaptures ]
+-- Returns the indexes of a given regex pattern
+-- 'pat'        [string]         unformatted pattern
+-- returns:     [numbers]        capture indexes
+local capture_cache = {}
+local function GetCaptures(pat)
+	local r = capture_cache
+	if not r[pat] then
+		for a, b, c, d, e in gfind(gsub(pat, "%((.+)%)", "%1"), gsub(pat, "%d%$", "%%(.-)$")) do
+			r[pat] = { a, b, c, d, e}
+		end
+	end
+
+	if not r[pat] then return nil, nil, nil, nil end
+	return r[pat][1], r[pat][2], r[pat][3], r[pat][4], r[pat][5]
+end
+
+-- [ SanitizePattern ]
+-- Sanitizes and convert patterns into gfind compatible ones.
+-- 'pattern'    [string]         unformatted pattern
+-- returns:     [string]         simplified gfind compatible pattern
+local sanitize_cache = {}
+local function SanitizePattern(pattern)
+	if not sanitize_cache[pattern] then
+		local ret = pattern
+		-- escape magic characters
+		ret = gsub(ret, "([%+%-%*%(%)%?%[%]%^])", "%%%1")
+		-- remove capture indexes
+		ret = gsub(ret, "%d%$","")
+		-- catch all characters
+		ret = gsub(ret, "(%%%a)","%(%1+%)")
+		-- convert all %s to .+
+		ret = gsub(ret, "%%s%+",".+")
+		-- set priority to numbers over strings
+		ret = gsub(ret, "%(.%+%)%(%%d%+%)","%(.-%)%(%%d%+%)")
+		-- cache it
+		sanitize_cache[pattern] = ret
+	end
+
+	return sanitize_cache[pattern]
+end
+
+-- [ cmatch ]
+-- Same as string.match but aware of capture indexes (up to 5)
+-- 'str'        [string]         input string that should be matched
+-- 'pat'        [string]         unformatted pattern
+-- returns:     [strings]        matched string in capture order
+local a, b, c, d, e
+local _, va, vb, vc, vd, ve
+local ra, rb, rc, rd, re
+local function cmatch(str, pat)
+	-- read capture indexes
+	a, b, c, d, e = GetCaptures(pat)
+	_, _, va, vb, vc, vd, ve = string.find(str, SanitizePattern(pat))
+
+	-- put entries into the proper return values
+	ra = e == 1 and ve or d == 1 and vd or c == 1 and vc or b == 1 and vb or va
+	rb = e == 2 and ve or d == 2 and vd or c == 2 and vc or a == 2 and va or vb
+	rc = e == 3 and ve or d == 3 and vd or a == 3 and va or b == 3 and vb or vc
+	rd = e == 4 and ve or a == 4 and va or c == 4 and vc or b == 4 and vb or vd
+	re = a == 5 and va or d == 5 and vd or c == 5 and vc or b == 5 and vb or ve
+
+	return ra, rb, rc, rd, re
+end
+
 ---自动攻击
 local function AutoAttack()
 	if not PlayerFrame.inCombat then
@@ -95,6 +160,13 @@ function DaruidBear:OnEnable()
 	self.parser = ParserLib:GetInstance("1.1")
 	self.parser:RegisterEvent(
 		"DaruidBear",
+		"CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", 
+		function (event, info)
+			self:SPELL_PERIODIC(event, info) 		
+		end
+	)
+	self.parser:RegisterEvent(
+		"DaruidBear",
 		"CHAT_MSG_SPELL_SELF_DAMAGE",
 		function(event, info)
 			self:SELF_DAMAGE(event, info)
@@ -141,6 +213,20 @@ function DaruidBear:Yell(message, ...)
 	SendChatMessage(message, "YELL")
 end
 
+function DaruidBear:SPELL_PERIODIC(event, info)
+	-- Printd("event：")
+	-- PrintTable(event)
+	-- Printd("info：")
+	-- PrintTable(info)
+	if info.type == "unknown" and info.message then
+		-- 伤害者 is afflicted by 法术名称 (等级).
+		local victim, skill = cmatch(info.message, "%s is afflicted by %s (1).")
+		if victim and skill and self.castSpells[skill] == victim  then
+			self:Say("<%s>已作用于<%s>！", skill, victim)
+		end
+	end
+end
+
 -- 自身施法成功（包括躲闪、抵抗、击中）
 function DaruidBear:SELF_DAMAGE(event, info)
 	self:LevelDebug(3, "自身施法成功；法术：%s；目标：%s；类型：%s；失效：%s", info.skill or "", info.victim or "", info.type or "", info.missType or "")
@@ -161,14 +247,14 @@ function DaruidBear:SELF_DAMAGE(event, info)
 				reflect = "反射",
 			}
 			if types[info.missType] then
-				self:Yell("<%s>被<%s>%s！", info.skill, info.victim, types[info.missType])
+				self:Yell("<%s>%s<%s>！", info.victim, types[info.missType], info.skill)
 			else
 				self:Yell("<%s>未作用于<%s>！", info.skill, info.victim)
 			end
 		elseif info.type == "leech" then
-			self:Yell("<%s>被<%s>吸收！", info.skill, info.victim)
+			self:Yell("<%s>吸收<%s>！", info.victim, info.skill)
 		elseif info.type == "dispel" then
-			self:Yell("<%s>被<%s>驱散！", info.skill, info.victim)
+			self:Yell("<%s>驱散<%s>！", info.victim, info.skill)
 		else
 			self:Yell("<%s>未生效于<%s>！", info.skill, info.victim)
 		end
