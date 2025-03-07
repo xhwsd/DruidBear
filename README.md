@@ -7,7 +7,7 @@
 ## 使用
 - 安装`!Libs`插件
 - [可选][[文档](https://github.com/xhwsd/SuperMacro/)][[下载](https://ghfast.top/https://github.com/xhwsd/SuperMacro/archive/master.zip)]安装`SuperMacro`插件，安装后将获得更多宏位
-- [[文档](https://github.com/xhwsd/DaruidBear/)][[下载](https://ghfast.top/https://github.com/xhwsd/DaruidBear/archive/master.zip)]安装`DaruidBear`插件
+- [[文档](https://github.com/xhwsd/DruidBear/)][[下载](https://ghfast.top/https://github.com/xhwsd/DruidBear/archive/master.zip)]安装`DruidBear`插件
 - 基于插件提供的函数，创建普通或超级宏
 - 将宏图标拖至动作条，然后使用宏
 
@@ -22,7 +22,7 @@
 
 ```
 /script -- CastSpellByName("低吼")
-/script DaruidBear:TauntSingle()
+/script DruidBear:TauntSingle()
 ```
 
 逻辑描述：
@@ -36,7 +36,7 @@
 
 ```
 /script -- CastSpellByName("挑战咆哮")
-/script DaruidBear:TauntGroup()
+/script DruidBear:TauntGroup()
 ```
 
 
@@ -46,7 +46,7 @@
 
 ```
 /script -- CastSpellByName("槌击")
-/script DaruidBear:PullSingle()
+/script DruidBear:PullSingle()
 ```
 
 参数列表：
@@ -65,7 +65,7 @@
 
 ```
 /script -- CastSpellByName("挥击")
-/script DaruidBear:PullGroup(30, 95)
+/script DruidBear:PullGroup(30, 95)
 ```
 
 参数列表：

@@ -5,7 +5,7 @@ if playerClass ~= "DRUID" then
 end
 
 -- 定义插件
-DaruidBear = AceLibrary("AceAddon-2.0"):new(
+DruidBear = AceLibrary("AceAddon-2.0"):new(
 	-- 控制台
 	"AceConsole-2.0",
 	-- 调试
@@ -105,8 +105,8 @@ local function HealthResidual(unit)
 end
 
 ---插件载入
-function DaruidBear:OnInitialize()
-	-- 几标题，以便调试输出
+function DruidBear:OnInitialize()
+	-- 精简标题
 	self.title = "熊德辅助"
 	-- 开启调试
 	self:SetDebugging(true)
@@ -115,21 +115,21 @@ function DaruidBear:OnInitialize()
 end
 
 ---插件打开
-function DaruidBear:OnEnable()
+function DruidBear:OnEnable()
 	self:LevelDebug(3, "插件打开")
 
 	-- 注册命令
-	self:RegisterChatCommand({"/XDFZ", '/DaruidBear'}, {
+	self:RegisterChatCommand({"/DB", '/DruidBear'}, {
 		type = "group",
 		args = {
-			tsms = {
+			debug = {
 				name = "调试模式",
 				desc = "开启或关闭调试模式",
 				type = "toggle",
 				get = "IsDebugging",
 				set = "SetDebugging"
 			},
-			tsdj = {
+			level = {
 				name = "调试等级",
 				desc = "设置或获取调试等级",
 				type = "range",
@@ -159,28 +159,28 @@ function DaruidBear:OnEnable()
 	-- 监听战斗日志
 	self.parser = ParserLib:GetInstance("1.1")
 	self.parser:RegisterEvent(
-		"DaruidBear",
+		"DruidBear",
 		"CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", 
 		function (event, info)
 			self:SPELL_PERIODIC(event, info) 		
 		end
 	)
 	self.parser:RegisterEvent(
-		"DaruidBear",
+		"DruidBear",
 		"CHAT_MSG_SPELL_SELF_DAMAGE",
 		function(event, info)
 			self:SELF_DAMAGE(event, info)
 		end
 	)
 	self.parser:RegisterEvent(
-		"DaruidBear",
+		"DruidBear",
 		"CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF",
 		function(event, info)
 			self:SELF_DAMAGE(event, info)
 		end
 	)
 	self.parser:RegisterEvent(
-		"DaruidBear",
+		"DruidBear",
 		"CHAT_MSG_SPELL_FAILED_LOCALPLAYER",
 		function(event, info)
 			self:SPELL_FAILED(event, info)
@@ -189,14 +189,14 @@ function DaruidBear:OnEnable()
 end
 
 ---插件关闭
-function DaruidBear:OnDisable()
+function DruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
 end
 
 ---说话
 ---@param message string 信息
----@param...? any 格式化参数
-function DaruidBear:Say(message, ...)
+---@param ...? any 格式化参数
+function DruidBear:Say(message, ...)
 	if arg.n > 0 then
 		message = string.format(message, unpack(arg))
 	end
@@ -205,15 +205,15 @@ end
 
 ---大喊
 ---@param message string 信息
----@param...? any 格式化参数
-function DaruidBear:Yell(message, ...)
+---@param ...? any 格式化参数
+function DruidBear:Yell(message, ...)
 	if arg.n > 0 then
 		message = string.format(message, unpack(arg))
 	end
 	SendChatMessage(message, "YELL")
 end
 
-function DaruidBear:SPELL_PERIODIC(event, info)
+function DruidBear:SPELL_PERIODIC(event, info)
 	-- Printd("event：")
 	-- PrintTable(event)
 	-- Printd("info：")
@@ -228,7 +228,7 @@ function DaruidBear:SPELL_PERIODIC(event, info)
 end
 
 -- 自身施法成功（包括躲闪、抵抗、击中）
-function DaruidBear:SELF_DAMAGE(event, info)
+function DruidBear:SELF_DAMAGE(event, info)
 	self:LevelDebug(3, "自身施法成功；法术：%s；目标：%s；类型：%s；失效：%s", info.skill or "", info.victim or "", info.type or "", info.missType or "")
 	local victim = self.castSpells[info.skill]
 	if victim and info.victim == victim then
@@ -263,7 +263,7 @@ function DaruidBear:SELF_DAMAGE(event, info)
 end
 
 -- 自身施法失败
-function DaruidBear:SPELL_FAILED(event, info)
+function DruidBear:SPELL_FAILED(event, info)
 	-- self:LevelDebug(3, "自身施法失败；法术：%s；目标：%s；类型：%s", info.skill or "nil", info.victim or "nil", info.type or "nil")
 end
 
@@ -271,7 +271,7 @@ end
 ---@param unit? string 单位名称；缺省为`target`
 ---@param spell? string 法术名称；缺省为`低吼`
 ---@return boolean satisfy 范围内返回真，范围外返回假
-function DaruidBear:IsRange(unit, spell)
+function DruidBear:IsRange(unit, spell)
 	unit = unit or "target"
 	spell = spell or "低吼"
 
@@ -309,7 +309,7 @@ function DaruidBear:IsRange(unit, spell)
 end
 
 ---嘲单
-function DaruidBear:TauntSingle()
+function DruidBear:TauntSingle()
 	-- 自动攻击
 	AutoAttack()
 
@@ -323,7 +323,7 @@ function DaruidBear:TauntSingle()
 end
 
 ---嘲群
-function DaruidBear:TauntGroup()
+function DruidBear:TauntGroup()
 	-- 自动攻击
 	AutoAttack()
 
@@ -338,7 +338,7 @@ end
 ---拉单
 ---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
 ---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
-function DaruidBear:PullSingle(dying, healthy)
+function DruidBear:PullSingle(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
 
@@ -358,7 +358,7 @@ function DaruidBear:PullSingle(dying, healthy)
 	elseif self.spellCheck:IsReady("狂暴") and (HasAura("狂暴回复") or residual <= dying) then
 		-- 提生命上限
 		CastSpellByName("狂暴")
-	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 40 and not HasAura("狂暴回复"))) then
+	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 60 and not HasAura("狂暴回复"))) then
 		-- 怒气过多
 		CastSpellByName("野蛮撕咬")
 	elseif self.spellCheck:IsReady("精灵之火（野性）") then
@@ -373,7 +373,7 @@ end
 ---拉群
 ---@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
 ---@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
-function DaruidBear:PullGroup(dying, healthy)
+function DruidBear:PullGroup(dying, healthy)
 	dying = dying or 30
 	healthy = healthy or 95
 

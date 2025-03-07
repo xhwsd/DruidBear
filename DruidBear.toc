@@ -1,5 +1,5 @@
 ## Interface: 11200
-## Title: DaruidBear 熊德
+## Title: DruidBear
 ## Title-zhCN: |CFF33AAFF[德鲁伊]|R熊德辅助插件
 ## Notes-zhCN: 适配乌龟服的熊德辅助插件
 ## Author: xhwsd@qq.com
@@ -15,4 +15,4 @@ Libs\SpellCheck-1.0\SpellCheck-1.0.lua
 Libs\SpellSlot-1.0\SpellSlot-1.0.lua 
 Libs\TargetSwitch-1.0\TargetSwitch-1.0.lua
 
-DaruidBear.lua
+DruidBear.lua
