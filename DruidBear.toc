@@ -1,18 +1,20 @@
 ## Interface: 11200
 ## Title: DruidBear
-## Title-zhCN: |CFF33AAFF[德鲁伊]|R熊德辅助插件
+## Title-zhCN: |CFF33AAFF[德鲁伊]|R熊德
 ## Notes-zhCN: 适配乌龟服的熊德辅助插件
-## Author: xhwsd@qq.com
-## Version: 1.1.2
+## Author: 王胖子(xhwsd@qq.com)
+## Version: 2.1.1
 ## Dependencies: !Libs
+## OptionalDeps: AceConsole-2.0, AceDebug-2.0, FuBarPlugin-2.0, AceLibrary, Tablet-2.0, SpellStatus-1.0, SpecialEvents-Aura-2.0
+## SavedVariablesPerCharacter: DruidBearDB
 
-Libs\ParserLib\ParserLib.lua
-Libs\ParserLib\FixGlobalString.lua
-Libs\ParserLib\optimizer-enUS.lua 
 Libs\ParserLib\optimizer-zhCN.lua 
+Libs\ParserLib\FixGlobalString.lua
+Libs\ParserLib\ParserLib.lua
 
-Libs\SpellCheck-1.0\SpellCheck-1.0.lua 
-Libs\SpellSlot-1.0\SpellSlot-1.0.lua 
-Libs\TargetSwitch-1.0\TargetSwitch-1.0.lua
+Libs\Wsd-Chat-1.0\Wsd-Chat-1.0.lua
+Libs\Wsd-Health-1.0\Wsd-Health-1.0.lua
+Libs\Wsd-Effect-1.0\Wsd-Effect-1.0.lua
+Libs\Wsd-Spell-1.0\Wsd-Spell-1.0.lua 
 
 DruidBear.lua

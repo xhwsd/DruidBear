@@ -9,181 +9,375 @@ DruidBear = AceLibrary("AceAddon-2.0"):new(
 	-- 控制台
 	"AceConsole-2.0",
 	-- 调试
-	"AceDebug-2.0"
+	"AceDebug-2.0", 
+	-- 数据库
+	"AceDB-2.0",
+	-- 小地图菜单
+	"FuBarPlugin-2.0",
+	-- 事件
+	"AceEvent-2.0"
 )
 
--- [ GetCaptures ]
--- Returns the indexes of a given regex pattern
--- 'pat'        [string]         unformatted pattern
--- returns:     [numbers]        capture indexes
-local capture_cache = {}
-local function GetCaptures(pat)
-	local r = capture_cache
-	if not r[pat] then
-		for a, b, c, d, e in gfind(gsub(pat, "%((.+)%)", "%1"), gsub(pat, "%d%$", "%%(.-)$")) do
-			r[pat] = { a, b, c, d, e}
-		end
-	end
+-- 提示操作
+local Tablet = AceLibrary("Tablet-2.0")
+-- 法术状态
+local SpellStatus = AceLibrary("SpellStatus-1.0")
+-- 光环事件
+local AuraEvents = AceLibrary("SpecialEvents-Aura-2.0")
+-- 日志解析
+local ParserLib = ParserLib:GetInstance("1.1")
 
-	if not r[pat] then return nil, nil, nil, nil end
-	return r[pat][1], r[pat][2], r[pat][3], r[pat][4], r[pat][5]
-end
-
--- [ SanitizePattern ]
--- Sanitizes and convert patterns into gfind compatible ones.
--- 'pattern'    [string]         unformatted pattern
--- returns:     [string]         simplified gfind compatible pattern
-local sanitize_cache = {}
-local function SanitizePattern(pattern)
-	if not sanitize_cache[pattern] then
-		local ret = pattern
-		-- escape magic characters
-		ret = gsub(ret, "([%+%-%*%(%)%?%[%]%^])", "%%%1")
-		-- remove capture indexes
-		ret = gsub(ret, "%d%$","")
-		-- catch all characters
-		ret = gsub(ret, "(%%%a)","%(%1+%)")
-		-- convert all %s to .+
-		ret = gsub(ret, "%%s%+",".+")
-		-- set priority to numbers over strings
-		ret = gsub(ret, "%(.%+%)%(%%d%+%)","%(.-%)%(%%d%+%)")
-		-- cache it
-		sanitize_cache[pattern] = ret
-	end
-
-	return sanitize_cache[pattern]
-end
-
--- [ cmatch ]
--- Same as string.match but aware of capture indexes (up to 5)
--- 'str'        [string]         input string that should be matched
--- 'pat'        [string]         unformatted pattern
--- returns:     [strings]        matched string in capture order
-local a, b, c, d, e
-local _, va, vb, vc, vd, ve
-local ra, rb, rc, rd, re
-local function cmatch(str, pat)
-	-- read capture indexes
-	a, b, c, d, e = GetCaptures(pat)
-	_, _, va, vb, vc, vd, ve = string.find(str, SanitizePattern(pat))
-
-	-- put entries into the proper return values
-	ra = e == 1 and ve or d == 1 and vd or c == 1 and vc or b == 1 and vb or va
-	rb = e == 2 and ve or d == 2 and vd or c == 2 and vc or a == 2 and va or vb
-	rc = e == 3 and ve or d == 3 and vd or a == 3 and va or b == 3 and vb or vc
-	rd = e == 4 and ve or a == 4 and va or c == 4 and vc or b == 4 and vb or vd
-	re = a == 5 and va or d == 5 and vd or c == 5 and vc or b == 5 and vb or ve
-
-	return ra, rb, rc, rd, re
-end
-
----自动攻击
-local function AutoAttack()
-	if not PlayerFrame.inCombat then
-		CastSpellByName("攻击")
-	end
-end
-
----是否具有光环
----@param aura string 光环名称
----@param unit? string 单位；缺省为`player`
----@return boolean has 光环存在返回真，否则返回假
-local function HasAura(aura, unit)
-	unit = unit or "player"
-	return UnitHasAura(unit, aura)
-end
-
----取生命剩余
----@param unit? string 单位；缺省为`player`
----@return integer percentage 生命剩余百分比
----@return integer residual 生命剩余
-local function HealthResidual(unit)
-	unit = unit or "player"
-	local residual = UnitHealth(unit)
-	-- 百分比 = 部分 / 整体 * 100
-	return math.floor(residual / UnitHealthMax(unit) * 100), residual
-end
+---@type Wsd-Health-1.0
+local Health = AceLibrary("Wsd-Health-1.0")
+---@type Wsd-Effect-1.0
+local Effect = AceLibrary("Wsd-Effect-1.0")
+---@type Wsd-Spell-1.0
+local Spell = AceLibrary("Wsd-Spell-1.0")
+---@type Wsd-Chat-1.0
+local Chat = AceLibrary("Wsd-Chat-1.0")
 
 ---插件载入
 function DruidBear:OnInitialize()
 	-- 精简标题
-	self.title = "熊德辅助"
+	self.title = "熊德"
 	-- 开启调试
 	self:SetDebugging(true)
 	-- 调试等级
 	self:SetDebugLevel(2)
+
+	-- 注册数据
+	self:RegisterDB("DruidBearDB")
+	-- 注册默认值
+	self:RegisterDefaults('profile', {
+		-- 时机
+		timing = {
+			-- 狂暴回复：怒气转生命；起始损失
+			frenziedRegeneration = 30,
+			-- 狂怒：涨怒气
+			enrage = {
+				-- 起始怒气
+				start = 10,
+				-- 狂暴回复时
+				frenziedRegeneration = true
+			},
+			-- 狂暴：提升生命上限
+			frenzied = {
+				-- 起始损失
+				start = 30,
+				frenziedRegeneration = true,
+			},
+			-- 野蛮撕咬：大量伤害和仇恨；起始怒气
+			savageBite = 60,
+		    -- 精灵之火（野性）：减护甲
+			faerieFireWild = "ready",
+		},
+		-- 通报
+		report = {
+			["低吼"] = "SAY",
+			["挑战咆哮"] = "SAY",
+			["狂暴回复"] = "SAY",
+			["狂暴"] = "SAY",
+			["树皮术（野性）"] = "SAY",
+		},
+	})
+
+	-- 具有图标
+	self.hasIcon = true
+	-- 小地图图标
+	self:SetIcon("Interface\\Icons\\Ability_Hunter_Pet_Bear")
+	-- 默认位置
+	self.defaultPosition = "LEFT"
+	-- 默认小地图位置
+	self.defaultMinimapPosition = 210
+	-- 无法分离提示（标签）
+	self.cannotDetachTooltip = false
+	-- 角色独立配置
+	self.independentProfile = true
+	-- 挂载时是否隐藏
+	self.hideWithoutStandby = false
+	-- 注册菜单项
+	self.OnMenuRequest = {
+		type = "group",
+		handler = self,
+		args = {
+			timing = {
+				type = "group",
+				name = "时机",
+				desc = "设置施放技能的时机",
+				order = 1,
+				args = {
+					frenziedRegeneration = {
+						type = "range",
+						name = "狂暴回复",
+						desc = "当生命小于或等于该百分比时",
+						order = 1,
+						min = 0,
+						max = 100,
+						step = 1,
+						get = function()
+							return self.db.profile.timing.frenziedRegeneration
+						end,
+						set = function(value)
+							self.db.profile.timing.frenziedRegeneration = value
+						end
+					},
+					enrage = {
+						type = "group",
+						name = "狂怒",
+						desc = "设置狂怒使用时机",
+						order = 2,
+						min = 0,
+						args = {
+							-- 起始怒气
+							start = {
+								type = "range",
+								name = "起手怒气",
+								desc = "当怒气小于该值时",
+								order = 1,
+								min = 0,
+								max = 100,
+								step = 1,
+								get = function()
+									return self.db.profile.timing.enrage.start
+								end,
+								set = function(value)
+									self.db.profile.timing.enrage.start = value
+								end
+							},
+							-- 狂暴回复
+							frenziedRegeneration = {
+								type = "toggle",
+								name = "狂暴回复",
+								desc = "当有狂暴回复时",
+								order = 2,
+								get = function()
+									return self.db.profile.timing.enrage.frenziedRegeneration
+								end,
+								set = function(value)
+									self.db.profile.timing.enrage.frenziedRegeneration = value
+								end
+							},
+						}
+					},
+					frenzied = {
+						type = "group",
+						name = "狂暴",
+						desc = "设置狂暴使用时机",
+						order = 3,
+						min = 0,
+						args = {
+							-- 起始怒气
+							start = {
+								type = "range",
+								name = "起手损失",
+								desc = "当损失小于或等于该值且未在战斗中时",
+								order = 1,
+								min = 0,
+								max = 100,
+								step = 1,
+								get = function()
+									return self.db.profile.timing.frenzied.start
+								end,
+								set = function(value)
+									self.db.profile.timing.frenzied.start = value
+								end
+							},
+							-- 狂暴回复
+							frenziedRegeneration = {
+								type = "toggle",
+								name = "狂暴回复",
+								desc = "当有狂暴回复时",
+								order = 2,
+								get = function()
+									return self.db.profile.timing.frenzied.frenziedRegeneration
+								end,
+								set = function(value)
+									self.db.profile.timing.frenzied.frenziedRegeneration = value
+								end
+							},
+						}
+					},
+					savageBite = {
+						type = "range",
+						name = "野蛮撕咬",
+						desc = "当怒气大于或等于该值且无狂暴回复时",
+						order = 4,
+						min = 30,
+						max = 100,
+						step = 1,
+						get = function()
+							return self.db.profile.timing.savageBite
+						end,
+						set = function(value)
+							self.db.profile.timing.savageBite = value
+						end
+					},
+					faerieFireWild = {
+						type = "text",
+						name = "精灵之火（野性）",
+						desc = "选择使用精灵之火（野性）的时机",
+						order = 5,
+						get = function()
+							return self.db.profile.timing.faerieFireWild
+						end,
+						set = function(value)
+							self.db.profile.timing.faerieFireWild = value
+						end,
+						validate = {
+							["disable"] = "禁止",
+							["ready"] = "技能就绪",
+							["none"] = "目标无效果",
+						}
+					},
+				},
+			},
+			report = {
+				type = "group",
+				name = "通报",
+				desc = "设置施放技能后是否通报",
+				order = 2,
+				args = {
+					growl = {
+						type = "text",
+						name = "低吼",
+						desc = "使用低吼后",
+						order = 1,
+						get = function()
+							return self.db.profile.report["低吼"]
+						end,
+						set = function(value)
+							self.db.profile.report["低吼"] = value
+						end,
+						validate = {
+							["disable"] = "禁止",
+							["SAY"] = "说话",
+							["YELL"] = "大喊",
+							["PARTY"] = "队伍",
+							["RAID"] = "团队",
+						}
+					},
+					challengingRoar = {
+						type = "toggle",
+						name = "挑战咆哮",
+						desc = "使用挑战咆哮后",
+						order = 2,
+						get = function()
+							return self.db.profile.report["挑战咆哮"]
+						end,
+						set = function(value)
+							self.db.profile.report["挑战咆哮"] = value
+						end,
+						validate = {
+							["disable"] = "禁止",
+							["SAY"] = "说话",
+							["YELL"] = "大喊",
+							["PARTY"] = "队伍",
+							["RAID"] = "团队",
+						}
+					},
+					frenziedRegeneration = {
+						type = "toggle",
+						name = "狂暴回复",
+						desc = "使用狂暴回复后",
+						order = 3,
+						get = function()
+							return self.db.profile.report["狂暴回复"]
+						end,
+						set = function(value)
+							self.db.profile.report["狂暴回复"] = value
+						end,
+						validate = {
+							["disable"] = "禁止",
+							["SAY"] = "说话",
+							["YELL"] = "大喊",
+							["PARTY"] = "队伍",
+							["RAID"] = "团队",
+						}
+					},
+					barkskinWild = {
+						type = "toggle",
+						name = "树皮术（野性）",
+						desc = "使用树皮术（野性）后",
+						order = 4,
+						get = function()
+							return self.db.profile.report["树皮术（野性）"]
+						end,
+						set = function(value)
+							self.db.profile.report["树皮术（野性）"] = value
+						end,
+						validate = {
+							["disable"] = "禁止",
+							["SAY"] = "说话",
+							["YELL"] = "大喊",
+							["PARTY"] = "队伍",
+							["RAID"] = "团队",
+						}
+					},
+				}
+			},
+			-- 其它
+			other = {
+				type = "header",
+				name = "其它",
+				order = 3,
+			},
+			debug = {
+				type = "toggle",
+				name = "调试模式",
+				desc = "开启或关闭调试模式",
+				order = 4,
+				get = "IsDebugging",
+				set = "SetDebugging"
+			},	
+			level = {
+				type = "range",
+				name = "调试等级",
+				desc = "设置或获取调试等级",
+				order = 5,
+				min = 1,
+				max = 3,
+				step = 1,
+				get = "GetDebugLevel",
+				set = "SetDebugLevel"
+			}
+		}
+	}
 end
 
 ---插件打开
 function DruidBear:OnEnable()
 	self:LevelDebug(3, "插件打开")
 
-	-- 注册命令
-	self:RegisterChatCommand({"/DB", '/DruidBear'}, {
-		type = "group",
-		args = {
-			debug = {
-				name = "调试模式",
-				desc = "开启或关闭调试模式",
-				type = "toggle",
-				get = "IsDebugging",
-				set = "SetDebugging"
-			},
-			level = {
-				name = "调试等级",
-				desc = "设置或获取调试等级",
-				type = "range",
-				min = 1,
-				max = 3,
-				get = "GetDebugLevel",
-				set = "SetDebugLevel"
-			}
-		},
-	})
+	-- 瞬间施法
+	self:RegisterEvent("SpellStatus_SpellCastInstant")
 
-	-- 法术检查
-	self.spellCheck = AceLibrary("SpellCheck-1.0")
-	-- 法术插槽
-	self.spellSlot = AceLibrary("SpellSlot-1.0")
-	-- 目标切换
-	self.targetSwitch = AceLibrary("TargetSwitch-1.0")
+	-- 获得增益
+	self:RegisterEvent("SpecialEvents_UnitBuffGained")
 
-	-- 使用低吼时间
-	self.useGrowlTime = GetTime()
-	-- 使用挑战咆哮时间
-	self.useGhallengingRoarTime = GetTime()
-
-	-- 施放法术
-	self.castSpells = {}
-
-	-- 监听战斗日志
-	self.parser = ParserLib:GetInstance("1.1")
-	self.parser:RegisterEvent(
+	-- 周期性伤害
+	ParserLib:RegisterEvent(
 		"DruidBear",
 		"CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", 
 		function (event, info)
 			self:SPELL_PERIODIC(event, info) 		
 		end
 	)
-	self.parser:RegisterEvent(
+
+	-- 自身法术造成伤害（如荆棘术）
+	ParserLib:RegisterEvent(
 		"DruidBear",
 		"CHAT_MSG_SPELL_SELF_DAMAGE",
 		function(event, info)
 			self:SELF_DAMAGE(event, info)
 		end
 	)
-	self.parser:RegisterEvent(
+
+	-- 自身增益（或物品）造成伤害（如荆棘术）
+	ParserLib:RegisterEvent(
 		"DruidBear",
 		"CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF",
 		function(event, info)
 			self:SELF_DAMAGE(event, info)
-		end
-	)
-	self.parser:RegisterEvent(
-		"DruidBear",
-		"CHAT_MSG_SPELL_FAILED_LOCALPLAYER",
-		function(event, info)
-			self:SPELL_FAILED(event, info)
 		end
 	)
 end
@@ -191,178 +385,179 @@ end
 ---插件关闭
 function DruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
+
+	-- 注销日记监听
+	ParserLib:UnregisterAllEvents("DruidBear")
 end
 
----说话
----@param message string 信息
----@param ...? any 格式化参数
-function DruidBear:Say(message, ...)
-	if arg.n > 0 then
-		message = string.format(message, unpack(arg))
-	end
-	SendChatMessage(message, "SAY")
+-- 取标题
+function DruidBear:GetTitle()
+	-- 置小地图图标点燃标题
+	return "熊德 v" .. GetAddOnMetadata("DruidBear", "Version")
 end
 
----大喊
----@param message string 信息
----@param ...? any 格式化参数
-function DruidBear:Yell(message, ...)
-	if arg.n > 0 then
-		message = string.format(message, unpack(arg))
-	end
-	SendChatMessage(message, "YELL")
+-- 提示更新
+function DruidBear:OnTooltipUpdate()
+	-- 置小地图图标点燃提示
+	Tablet:SetHint("\n鼠标右键 - 显示插件选项")
 end
 
-function DruidBear:SPELL_PERIODIC(event, info)
-	-- Printd("event：")
-	-- PrintTable(event)
-	-- Printd("info：")
-	-- PrintTable(info)
-	if info.type == "unknown" and info.message then
-		-- 伤害者 is afflicted by 法术名称 (等级).
-		local victim, skill = cmatch(info.message, "%s is afflicted by %s (1).")
-		if victim and skill and self.castSpells[skill] == victim  then
-			self:Say("<%s>已作用于<%s>！", skill, victim)
-		end
-	end
-end
+-- 瞬间施法
+---@param id number 法术标识
+---@param name string 法术名称
+---@param rank string 法术等级
+---@param fullName string 法术全名
+function DruidBear:SpellStatus_SpellCastInstant(id, name, rank, fullName)
+	self:LevelDebug(3, "瞬间施法；法术：%s", name)
 
--- 自身施法成功（包括躲闪、抵抗、击中）
-function DruidBear:SELF_DAMAGE(event, info)
-	self:LevelDebug(3, "自身施法成功；法术：%s；目标：%s；类型：%s；失效：%s", info.skill or "", info.victim or "", info.type or "", info.missType or "")
-	local victim = self.castSpells[info.skill]
-	if victim and info.victim == victim then
-		if info.type == "hit" or info.type == "cast" then
-			self:Say("<%s>已作用于<%s>！", info.skill, info.victim)
-		elseif info.type == "miss" then
-			local types = {
-				resist = "抵抗",
-				immune = "免疫",
-				block = "阻挡",
-				deflect = "偏移",
-				dodge = "躲闪",
-				evade = "回避",
-				absorb = "吸收",
-				parry = "招架",
-				reflect = "反射",
-			}
-			if types[info.missType] then
-				self:Yell("<%s>%s<%s>！", info.victim, types[info.missType], info.skill)
-			else
-				self:Yell("<%s>未作用于<%s>！", info.skill, info.victim)
-			end
-		elseif info.type == "leech" then
-			self:Yell("<%s>吸收<%s>！", info.victim, info.skill)
-		elseif info.type == "dispel" then
-			self:Yell("<%s>驱散<%s>！", info.victim, info.skill)
-		else
-			self:Yell("<%s>未生效于<%s>！", info.skill, info.victim)
-		end
-		self.castSpells[info.skill] = nil
-	end
-end
-
--- 自身施法失败
-function DruidBear:SPELL_FAILED(event, info)
-	-- self:LevelDebug(3, "自身施法失败；法术：%s；目标：%s；类型：%s", info.skill or "nil", info.victim or "nil", info.type or "nil")
-end
-
----检验单位是否在范围
----@param unit? string 单位名称；缺省为`target`
----@param spell? string 法术名称；缺省为`低吼`
----@return boolean satisfy 范围内返回真，范围外返回假
-function DruidBear:IsRange(unit, spell)
-	unit = unit or "target"
-	spell = spell or "低吼"
-
-	-- 单位不存在
-	if not UnitExists(unit) then
-		return false
+	-- 通报类型
+	local type = self.db.profile.report[buff]
+	if not type or type == "disable" then
+		return
 	end
 
-	-- 目标为自己
-	if UnitIsUnit(unit, "player") then
-		return true
-	end
-
-	-- 客户端不可见
-	if not UnitIsVisible(unit) then
-		return false
-	end
-
-	-- 取动作插槽
-	local slot = self.spellSlot:FindSpell(spell)
-	if slot then
-		if self.targetSwitch:ToUnit(unit) then
-			local satisfy = IsActionInRange(slot) == 1
-			self.targetSwitch:ToLast()
-			return satisfy
-		else
-			self:LevelDebug(2, "切换到单位失败；单位：%s", unit)
-		end
+	if name == "挑战咆哮" then
+		Chat:Send(type, "对周围施放<%s>！", name)
 	else
-		self:LevelDebug(2, "未在动作条找到法术；法术：%s", spell)
-	end
-
-	-- 决斗范围内（10码）
-	return CheckInteractDistance(unit, 1) == 1
-end
-
----嘲单
-function DruidBear:TauntSingle()
-	-- 自动攻击
-	AutoAttack()
-
-	-- 使用间隔、技能就绪、可以攻击、目标在范围内
-	if GetTime() - self.useGrowlTime >= 2 and self.spellCheck:IsReady("低吼") and UnitCanAttack("player", "target") and self:IsRange("target", "低吼") then
-		-- 仅通过这里施放的低吼后续才处理
-		self.castSpells["低吼"] = UnitName("target")
-		CastSpellByName("低吼")
-		self.useGrowlTime = GetTime()
+		Chat:Send(type, "施放<%s>！", name)
 	end
 end
 
----嘲群
-function DruidBear:TauntGroup()
-	-- 自动攻击
-	AutoAttack()
+-- 获得增益效果
+---@param unit string 事件单位
+---@param buff string 增益名称
+function DruidBear:SpecialEvents_UnitBuffGained(unit, buff)
+	self:LevelDebug(3, "获得增益；单位：%s；增益：%s", unit, buff)
 
-	-- 使用间隔、技能就绪、魔力足够
-	if GetTime() - self.useGhallengingRoarTime >= 2 and self.spellCheck:IsReady("挑战咆哮") and UnitMana("player") >= 15 then
-		CastSpellByName("挑战咆哮")
-		self:Say("对周围使用<挑战咆哮>成功！")
-		self.useGhallengingRoarTime = GetTime()
+	-- 仅限自身
+	if not UnitIsUnit(unit, "player") then
+		return
+	end
+
+	-- 通报类型
+	local type = self.db.profile.report[buff]
+	if not type or type == "disable" then
+		return
+	end
+
+	if buff == "狂暴回复" then
+		Chat:Send(type, "开启<%s>怒气转为生命！", buff)
+	elseif buff == "狂暴" then
+		Chat:Send(type, "开启<%s>生命上限提升！", buff)
+	elseif buff == "树皮术（野性）" then
+		Chat:Send(type, "开启<%s>受到近战伤害减半！", buff)
+	else 
+		Chat:Send(type, "获得<%s>！", buff)
 	end
 end
 
----拉单
----@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
----@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
-function DruidBear:PullSingle(dying, healthy)
-	dying = dying or 30
-	healthy = healthy or 95
+-- 造成周期性伤害
+function DruidBear:SPELL_PERIODIC(event, info)
+	if info.type == "unknown" then
+		-- 训练假人 is afflicted by 低吼 (1).
+		local victim, skill, rank = ParserLib:Deformat(info.message, "%s is afflicted by %s (%d).")
+		if victim and skill then
+			info.type = "debuff"
+			info.victim = victim
+			info.skill = skill
+			info.amountRank = rank
+			info.message = nil
+		end
+	end
 
+	self:LevelDebug(3, "造成周期性伤害；类型：%s；法术：%s；事件：%s；消息：%s", info.type, info.skill, event, info.message)
+	if not info.skill then
+		return
+	end
+
+	-- 通报类型
+	local type = self.db.profile.report[info.skill]
+	if not type or type == "disable" then
+		return
+	end
+
+	-- Chat:Send(type, "<%s>已生效于<%s>！", info.skill, info.victim)
+end
+
+-- 自身造成伤害（躲闪、抵抗、击中、荆棘等）
+function DruidBear:SELF_DAMAGE(event, info)
+	self:LevelDebug(3, "自身造成伤害；类型：%s；法术：%s；事件：%s；消息：%s", info.type, info.skill, event, info.message)
+	if not info.skill then
+		return
+	end
+
+	-- 通报类型
+	local type = self.db.profile.report[info.skill]
+	if not type or type == "disable" then
+		return
+	end
+
+	if info.type == "hit" or info.type == "cast" then
+		Chat:Send(type, "<%s>作用于<%s>！", info.skill, info.victim)
+	elseif info.type == "miss" then
+		local types = {
+			resist = "抵抗",
+			immune = "免疫",
+			block = "阻挡",
+			deflect = "偏移",
+			dodge = "躲闪",
+			evade = "回避",
+			absorb = "吸收",
+			parry = "招架",
+			reflect = "反射",
+		}
+		if types[info.missType] then
+			Chat:Send(type, "<%s>被<%s>%s！", info.skill, info.victim, types[info.missType])
+		else
+			Chat:Send(type, "<%s>未命中<%s>！", info.skill, info.victim)
+		end
+	elseif info.type == "leech" then
+		Chat:Send(type, "<%s>被<%s>吸收！", info.skill, info.victim)
+	elseif info.type == "dispel" then
+		Chat:Send(type, "<%s>被<%s>驱散！", info.skill, info.victim)
+	else
+		Chat:Send(type, "<%s>未生效！", info.skill)
+	end
+end
+
+-- 拉单
+function DruidBear:PullSingle()
 	-- 自动攻击
-	AutoAttack()
+	Spell:AutoAttack()
 
-	-- 抉择
-	local residual = HealthResidual("player")
+	-- 抉择技能
+	local health = Health:GetRemaining("player")
 	local mana = UnitMana("player")
-	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
-		-- 回生命
+	if health <= self.db.profile.timing.frenziedRegeneration and not Effect:FindName("狂暴回复") and Spell:IsReady("狂暴回复") then
+		-- 当生命小于或等于该百分比时：怒气转生命
 		CastSpellByName("狂暴回复")
-		self:Yell("危急濒死，已使用<狂暴回复>！")
-	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
-		-- 涨怒气
+	elseif mana < self.db.profile.timing.enrage.start and not UnitAffectingCombat("player") and Spell:IsReady("狂怒") then
+		-- 当怒气小于该值且未在战斗中时：涨怒气
 		CastSpellByName("狂怒")
-	elseif self.spellCheck:IsReady("狂暴") and (HasAura("狂暴回复") or residual <= dying) then
-		-- 提生命上限
+	elseif self.db.profile.timing.enrage.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂怒") then
+		-- 当有狂暴回复时：涨怒气
+		CastSpellByName("狂怒")
+	elseif health <= self.db.profile.timing.frenzied.start and Spell:IsReady("狂暴") then
+		-- 当损失小于或等于该值时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 60 and not HasAura("狂暴回复"))) then
-		-- 怒气过多
+	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂暴") then
+		-- 当有狂暴回复时：提升生命上限
+		CastSpellByName("狂暴")
+	elseif Effect:FindName("节能施法") then
+		-- 当有节能施法时：白嫖技能
+		if Spell:IsReady("野蛮撕咬") then
+			CastSpellByName("野蛮撕咬")
+		else
+			CastSpellByName("槌击")
+		end
+	elseif mana >= self.db.profile.timing.savageBite and not Effect:FindName("狂暴回复") and Spell:IsReady("野蛮撕咬") then
+		-- 当怒气大于或等于该值且无狂暴回复时：泄怒气
 		CastSpellByName("野蛮撕咬")
-	elseif self.spellCheck:IsReady("精灵之火（野性）") then
-		-- 骗节能
+	elseif self.db.profile.timing.faerieFireWild == "ready" and Spell:IsReady("精灵之火（野性）") then
+		-- 当法术就绪时：骗节能
+		CastSpellByName("精灵之火（野性）")
+	elseif self.db.profile.timing.faerieFireWild == "none" and not Effect:FindName("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
+		-- 当目标无精灵之火时：减护甲
 		CastSpellByName("精灵之火（野性）")
 	else
 		-- 泄怒气
@@ -370,41 +565,48 @@ function DruidBear:PullSingle(dying, healthy)
 	end
 end
 
----拉群
----@param dying? integer 濒死；当剩余生命百分比低于或等于时，将尝试保命；缺省为`30`
----@param healthy? integer 健康；当剩余生命百分比高于或等于时，将尝试涨怒气；缺省为`95`
-function DruidBear:PullGroup(dying, healthy)
-	dying = dying or 30
-	healthy = healthy or 95
-
+-- 拉群
+function DruidBear:PullGroup()
 	-- 自动攻击
-	AutoAttack()
+	Spell:AutoAttack()
 	
-	-- 抉择
-	local residual = HealthResidual("player")
+	-- 抉择技能
+	local health = Health:GetRemaining("player")
 	local mana = UnitMana("player")
-	if self.spellCheck:IsReady("狂暴回复") and not HasAura("狂暴回复") and residual <= dying then
-		-- 回生命
+	if health <= self.db.profile.timing.frenziedRegeneration and not Effect:FindName("狂暴回复") and Spell:IsReady("狂暴回复") then
+		-- 当生命小于或等于该百分比时：怒气转生命
 		CastSpellByName("狂暴回复")
-		self:Yell("危急濒死，已使用<狂暴回复>！")
-	elseif self.spellCheck:IsReady("狂怒") and (HasAura("狂暴回复") or (mana < 10 and not UnitAffectingCombat("player") and residual >= healthy)) then
-		-- 涨怒气
+	elseif mana < self.db.profile.timing.enrage.start and not UnitAffectingCombat("player") and Spell:IsReady("狂怒") then
+		-- 当怒气小于该值且未在战斗中时：涨怒气
 		CastSpellByName("狂怒")
-	elseif self.spellCheck:IsReady("狂暴") and (HasAura("狂暴回复") or residual <= dying) then
-		-- 提生命上限
+	elseif self.db.profile.timing.enrage.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂怒") then
+		-- 当有狂暴回复时：涨怒气
+		CastSpellByName("狂怒")
+	elseif health <= self.db.profile.timing.frenzied.start and Spell:IsReady("狂暴") then
+		-- 当损失小于或等于该值时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif self.spellCheck:IsReady("野蛮撕咬") and (HasAura("节能施法") or (mana >= 80 and not HasAura("狂暴回复"))) then
-		-- 怒气太多
-		CastSpellByName("野蛮撕咬")
-	elseif mana >= 40 and not HasAura("狂暴回复") then
-		-- 怒气过多
-		CastSpellByName("槌击")
-	elseif mana >= 10 and not HasAura("挫志咆哮", "target") and not HasAura("挫志怒吼", "target") then
-		-- 上减益
+	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂暴") then
+		-- 当有狂暴回复时：提升生命上限
+		CastSpellByName("狂暴")
+	elseif Effect:FindName("节能施法") then
+		-- 当有节能施法时：白嫖技能
+		if Spell:IsReady("野蛮撕咬") then
+			CastSpellByName("野蛮撕咬")
+		else
+			CastSpellByName("槌击")
+		end
+	elseif mana >= 10 and not Effect:FindName("挫志咆哮", "target") and not Effect:FindName("挫志怒吼", "target") and Spell:IsReady("挫志咆哮") then
+		-- 当目标挫志咆哮和挫志怒吼时：减攻击强度
 		CastSpellByName("挫志咆哮")
-	elseif self.spellCheck:IsReady("精灵之火（野性）") then
-		-- 骗节能
-		CastSpellByName("精灵之火（野性）") 
+	elseif mana >= self.db.profile.timing.savageBite and not Effect:FindName("狂暴回复") and Spell:IsReady("野蛮撕咬") then
+		-- 当怒气大于或等于该值且无狂暴回复时：泄怒气
+		CastSpellByName("野蛮撕咬")
+	elseif self.db.profile.timing.faerieFireWild == "ready" and Spell:IsReady("精灵之火（野性）") then
+		-- 当法术就绪时：骗节能
+		CastSpellByName("精灵之火（野性）")
+	elseif self.db.profile.timing.faerieFireWild == "none" and not Effect:FindName("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
+		-- 当目标无精灵之火时：减护甲
+		CastSpellByName("精灵之火（野性）")
 	else
 		-- 泄怒气
 		CastSpellByName("挥击")
