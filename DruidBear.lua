@@ -12,10 +12,10 @@ DruidBear = AceLibrary("AceAddon-2.0"):new(
 	"AceDebug-2.0", 
 	-- 数据库
 	"AceDB-2.0",
-	-- 小地图菜单
-	"FuBarPlugin-2.0",
 	-- 事件
-	"AceEvent-2.0"
+	"AceEvent-2.0",
+	-- 小地图菜单
+	"FuBarPlugin-2.0"
 )
 
 -- 提示操作
@@ -36,7 +36,7 @@ local Spell = AceLibrary("Wsd-Spell-1.0")
 ---@type Wsd-Chat-1.0
 local Chat = AceLibrary("Wsd-Chat-1.0")
 
----插件载入
+-- 插件载入
 function DruidBear:OnInitialize()
 	-- 精简标题
 	self.title = "熊德"
@@ -73,18 +73,18 @@ function DruidBear:OnInitialize()
 		},
 		-- 通报
 		report = {
-			["低吼"] = "SAY",
-			["挑战咆哮"] = "SAY",
-			["狂暴回复"] = "SAY",
-			["狂暴"] = "SAY",
-			["树皮术（野性）"] = "SAY",
+			["低吼"] = true,
+			["挑战咆哮"] = true,
+			["狂暴回复"] = true,
+			["狂暴"] = true,
+			["树皮术（野性）"] = true,
 		},
 	})
 
 	-- 具有图标
 	self.hasIcon = true
 	-- 小地图图标
-	self:SetIcon("Interface\\Icons\\Ability_Hunter_Pet_Bear")
+	self:SetIcon("Interface\\Icons\\Ability_Racial_BearForm")
 	-- 默认位置
 	self.defaultPosition = "LEFT"
 	-- 默认小地图位置
@@ -238,7 +238,7 @@ function DruidBear:OnInitialize()
 				order = 2,
 				args = {
 					growl = {
-						type = "text",
+						type = "toggle",
 						name = "低吼",
 						desc = "使用低吼后",
 						order = 1,
@@ -247,14 +247,7 @@ function DruidBear:OnInitialize()
 						end,
 						set = function(value)
 							self.db.profile.report["低吼"] = value
-						end,
-						validate = {
-							["disable"] = "禁止",
-							["SAY"] = "说话",
-							["YELL"] = "大喊",
-							["PARTY"] = "队伍",
-							["RAID"] = "团队",
-						}
+						end
 					},
 					challengingRoar = {
 						type = "toggle",
@@ -266,14 +259,7 @@ function DruidBear:OnInitialize()
 						end,
 						set = function(value)
 							self.db.profile.report["挑战咆哮"] = value
-						end,
-						validate = {
-							["disable"] = "禁止",
-							["SAY"] = "说话",
-							["YELL"] = "大喊",
-							["PARTY"] = "队伍",
-							["RAID"] = "团队",
-						}
+						end
 					},
 					frenziedRegeneration = {
 						type = "toggle",
@@ -285,14 +271,7 @@ function DruidBear:OnInitialize()
 						end,
 						set = function(value)
 							self.db.profile.report["狂暴回复"] = value
-						end,
-						validate = {
-							["disable"] = "禁止",
-							["SAY"] = "说话",
-							["YELL"] = "大喊",
-							["PARTY"] = "队伍",
-							["RAID"] = "团队",
-						}
+						end
 					},
 					barkskinWild = {
 						type = "toggle",
@@ -304,14 +283,7 @@ function DruidBear:OnInitialize()
 						end,
 						set = function(value)
 							self.db.profile.report["树皮术（野性）"] = value
-						end,
-						validate = {
-							["disable"] = "禁止",
-							["SAY"] = "说话",
-							["YELL"] = "大喊",
-							["PARTY"] = "队伍",
-							["RAID"] = "团队",
-						}
+						end
 					},
 				}
 			},
@@ -344,7 +316,7 @@ function DruidBear:OnInitialize()
 	}
 end
 
----插件打开
+-- 插件打开
 function DruidBear:OnEnable()
 	self:LevelDebug(3, "插件打开")
 
@@ -382,18 +354,12 @@ function DruidBear:OnEnable()
 	)
 end
 
----插件关闭
+-- 插件关闭
 function DruidBear:OnDisable()
 	self:LevelDebug(3, "插件关闭")
 
 	-- 注销日记监听
 	ParserLib:UnregisterAllEvents("DruidBear")
-end
-
--- 取标题
-function DruidBear:GetTitle()
-	-- 置小地图图标点燃标题
-	return "熊德 v" .. GetAddOnMetadata("DruidBear", "Version")
 end
 
 -- 提示更新
@@ -410,16 +376,15 @@ end
 function DruidBear:SpellStatus_SpellCastInstant(id, name, rank, fullName)
 	self:LevelDebug(3, "瞬间施法；法术：%s", name)
 
-	-- 通报类型
-	local type = self.db.profile.report[buff]
-	if not type or type == "disable" then
+	-- 是否通报
+	if not self.db.profile.report[buff] then
 		return
 	end
 
 	if name == "挑战咆哮" then
-		Chat:Send(type, "对周围施放<%s>！", name)
+		Chat:Say("对周围施放<%s>！", name)
 	else
-		Chat:Send(type, "施放<%s>！", name)
+		Chat:Say("施放<%s>！", name)
 	end
 end
 
@@ -427,27 +392,27 @@ end
 ---@param unit string 事件单位
 ---@param buff string 增益名称
 function DruidBear:SpecialEvents_UnitBuffGained(unit, buff)
+	-- 会重复收到该事件（如：团队中 raidN、安装 SuperWoW 为 GUID、player）
 	self:LevelDebug(3, "获得增益；单位：%s；增益：%s", unit, buff)
 
 	-- 仅限自身
-	if not UnitIsUnit(unit, "player") then
+	if unit ~= 'player' then
 		return
 	end
 
-	-- 通报类型
-	local type = self.db.profile.report[buff]
-	if not type or type == "disable" then
+	-- 是否通报
+	if not self.db.profile.report[buff] then
 		return
 	end
 
 	if buff == "狂暴回复" then
-		Chat:Send(type, "开启<%s>怒气转为生命！", buff)
+		Chat:Yell("开启<%s>怒气转为生命！", buff)
 	elseif buff == "狂暴" then
-		Chat:Send(type, "开启<%s>生命上限提升！", buff)
+		Chat:Yell("开启<%s>生命上限提升！", buff)
 	elseif buff == "树皮术（野性）" then
-		Chat:Send(type, "开启<%s>受到近战伤害减半！", buff)
+		Chat:Yell("开启<%s>受到近战伤害减半！", buff)
 	else 
-		Chat:Send(type, "获得<%s>！", buff)
+		Chat:Send("获得<%s>！", buff)
 	end
 end
 
@@ -476,7 +441,7 @@ function DruidBear:SPELL_PERIODIC(event, info)
 		return
 	end
 
-	-- Chat:Send(type, "<%s>已生效于<%s>！", info.skill, info.victim)
+	-- Chat:Say("<%s>已生效于<%s>！", info.skill, info.victim)
 end
 
 -- 自身造成伤害（躲闪、抵抗、击中、荆棘等）
@@ -486,14 +451,13 @@ function DruidBear:SELF_DAMAGE(event, info)
 		return
 	end
 
-	-- 通报类型
-	local type = self.db.profile.report[info.skill]
-	if not type or type == "disable" then
+	-- 是否通报
+	if not self.db.profile.report[info.skill] or info.skill ~= "低吼" then
 		return
 	end
 
 	if info.type == "hit" or info.type == "cast" then
-		Chat:Send(type, "<%s>作用于<%s>！", info.skill, info.victim)
+		Chat:Say("<%s>作用于<%s>！", info.skill, info.victim)
 	elseif info.type == "miss" then
 		local types = {
 			resist = "抵抗",
@@ -507,16 +471,16 @@ function DruidBear:SELF_DAMAGE(event, info)
 			reflect = "反射",
 		}
 		if types[info.missType] then
-			Chat:Send(type, "<%s>被<%s>%s！", info.skill, info.victim, types[info.missType])
+			Chat:Yell("<%s>被<%s>%s！", info.skill, info.victim, types[info.missType])
 		else
-			Chat:Send(type, "<%s>未命中<%s>！", info.skill, info.victim)
+			Chat:Yell("<%s>未命中<%s>！", info.skill, info.victim)
 		end
 	elseif info.type == "leech" then
-		Chat:Send(type, "<%s>被<%s>吸收！", info.skill, info.victim)
+		Chat:Yell("<%s>被<%s>吸收！", info.skill, info.victim)
 	elseif info.type == "dispel" then
-		Chat:Send(type, "<%s>被<%s>驱散！", info.skill, info.victim)
+		Chat:Yell("<%s>被<%s>驱散！", info.skill, info.victim)
 	else
-		Chat:Send(type, "<%s>未生效！", info.skill)
+		Chat:Yell("<%s>未生效！", info.skill)
 	end
 end
 
