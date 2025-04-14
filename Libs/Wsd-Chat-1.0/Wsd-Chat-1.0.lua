@@ -1,10 +1,10 @@
 --[[
 Name: Wsd-Chat-1.0
 Revision: $Rev: 10002 $
-Author(s): xhwsd
+Author(s): 树先生 (xhwsd@qq.com)
 Website: https://github.com/xhwsd
 Description: 聊天相关库。
-Dependencies:
+Dependencies: AceLibrary
 ]]
 
 -- 主要版本

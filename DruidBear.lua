@@ -23,14 +23,14 @@ local Tablet = AceLibrary("Tablet-2.0")
 -- 法术状态
 local SpellStatus = AceLibrary("SpellStatus-1.0")
 -- 光环事件
-local AuraEvents = AceLibrary("SpecialEvents-Aura-2.0")
+local AuraEvent = AceLibrary("SpecialEvents-Aura-2.0")
 -- 日志解析
 local ParserLib = ParserLib:GetInstance("1.1")
 
 ---@type Wsd-Health-1.0
 local Health = AceLibrary("Wsd-Health-1.0")
----@type Wsd-Effect-1.0
-local Effect = AceLibrary("Wsd-Effect-1.0")
+---@type Wsd-Buff-1.0
+local Buff = AceLibrary("Wsd-Buff-1.0")
 ---@type Wsd-Spell-1.0
 local Spell = AceLibrary("Wsd-Spell-1.0")
 ---@type Wsd-Chat-1.0
@@ -74,9 +74,9 @@ function DruidBear:OnInitialize()
 		-- 通报
 		report = {
 			["低吼"] = true,
-			["挑战咆哮"] = true,
+			["挑战咆哮"] = false,
 			["狂暴回复"] = true,
-			["狂暴"] = true,
+			["狂暴"] = false,
 			["树皮术（野性）"] = true,
 		},
 	})
@@ -492,35 +492,35 @@ function DruidBear:PullSingle()
 	-- 抉择技能
 	local health = Health:GetRemaining("player")
 	local mana = UnitMana("player")
-	if health <= self.db.profile.timing.frenziedRegeneration and not Effect:FindName("狂暴回复") and Spell:IsReady("狂暴回复") then
+	if health <= self.db.profile.timing.frenziedRegeneration and not Buff:GetUnit("狂暴回复") and Spell:IsReady("狂暴回复") then
 		-- 当生命小于或等于该百分比时：怒气转生命
 		CastSpellByName("狂暴回复")
 	elseif mana < self.db.profile.timing.enrage.start and not UnitAffectingCombat("player") and Spell:IsReady("狂怒") then
 		-- 当怒气小于该值且未在战斗中时：涨怒气
 		CastSpellByName("狂怒")
-	elseif self.db.profile.timing.enrage.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂怒") then
+	elseif self.db.profile.timing.enrage.frenziedRegeneration and Buff:GetUnit("狂暴回复") and Spell:IsReady("狂怒") then
 		-- 当有狂暴回复时：涨怒气
 		CastSpellByName("狂怒")
 	elseif health <= self.db.profile.timing.frenzied.start and Spell:IsReady("狂暴") then
 		-- 当损失小于或等于该值时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂暴") then
+	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Buff:GetUnit("狂暴回复") and Spell:IsReady("狂暴") then
 		-- 当有狂暴回复时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif Effect:FindName("节能施法") then
+	elseif Buff:GetUnit("节能施法") then
 		-- 当有节能施法时：白嫖技能
 		if Spell:IsReady("野蛮撕咬") then
 			CastSpellByName("野蛮撕咬")
 		else
 			CastSpellByName("槌击")
 		end
-	elseif mana >= self.db.profile.timing.savageBite and not Effect:FindName("狂暴回复") and Spell:IsReady("野蛮撕咬") then
+	elseif mana >= self.db.profile.timing.savageBite and not Buff:GetUnit("狂暴回复") and Spell:IsReady("野蛮撕咬") then
 		-- 当怒气大于或等于该值且无狂暴回复时：泄怒气
 		CastSpellByName("野蛮撕咬")
 	elseif self.db.profile.timing.faerieFireWild == "ready" and Spell:IsReady("精灵之火（野性）") then
 		-- 当法术就绪时：骗节能
 		CastSpellByName("精灵之火（野性）")
-	elseif self.db.profile.timing.faerieFireWild == "none" and not Effect:FindName("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
+	elseif self.db.profile.timing.faerieFireWild == "none" and not Buff:GetUnit("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
 		-- 当目标无精灵之火时：减护甲
 		CastSpellByName("精灵之火（野性）")
 	else
@@ -537,38 +537,38 @@ function DruidBear:PullGroup()
 	-- 抉择技能
 	local health = Health:GetRemaining("player")
 	local mana = UnitMana("player")
-	if health <= self.db.profile.timing.frenziedRegeneration and not Effect:FindName("狂暴回复") and Spell:IsReady("狂暴回复") then
+	if health <= self.db.profile.timing.frenziedRegeneration and not Buff:GetUnit("狂暴回复") and Spell:IsReady("狂暴回复") then
 		-- 当生命小于或等于该百分比时：怒气转生命
 		CastSpellByName("狂暴回复")
 	elseif mana < self.db.profile.timing.enrage.start and not UnitAffectingCombat("player") and Spell:IsReady("狂怒") then
 		-- 当怒气小于该值且未在战斗中时：涨怒气
 		CastSpellByName("狂怒")
-	elseif self.db.profile.timing.enrage.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂怒") then
+	elseif self.db.profile.timing.enrage.frenziedRegeneration and Buff:GetUnit("狂暴回复") and Spell:IsReady("狂怒") then
 		-- 当有狂暴回复时：涨怒气
 		CastSpellByName("狂怒")
 	elseif health <= self.db.profile.timing.frenzied.start and Spell:IsReady("狂暴") then
 		-- 当损失小于或等于该值时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Effect:FindName("狂暴回复") and Spell:IsReady("狂暴") then
+	elseif self.db.profile.timing.frenzied.frenziedRegeneration and Buff:GetUnit("狂暴回复") and Spell:IsReady("狂暴") then
 		-- 当有狂暴回复时：提升生命上限
 		CastSpellByName("狂暴")
-	elseif Effect:FindName("节能施法") then
+	elseif Buff:GetUnit("节能施法") then
 		-- 当有节能施法时：白嫖技能
 		if Spell:IsReady("野蛮撕咬") then
 			CastSpellByName("野蛮撕咬")
 		else
 			CastSpellByName("槌击")
 		end
-	elseif mana >= 10 and not Effect:FindName("挫志咆哮", "target") and not Effect:FindName("挫志怒吼", "target") and Spell:IsReady("挫志咆哮") then
+	elseif mana >= 10 and not Buff:GetUnit("挫志咆哮", "target") and not Buff:GetUnit("挫志怒吼", "target") and Spell:IsReady("挫志咆哮") then
 		-- 当目标挫志咆哮和挫志怒吼时：减攻击强度
 		CastSpellByName("挫志咆哮")
-	elseif mana >= self.db.profile.timing.savageBite and not Effect:FindName("狂暴回复") and Spell:IsReady("野蛮撕咬") then
+	elseif mana >= self.db.profile.timing.savageBite and not Buff:GetUnit("狂暴回复") and Spell:IsReady("野蛮撕咬") then
 		-- 当怒气大于或等于该值且无狂暴回复时：泄怒气
 		CastSpellByName("野蛮撕咬")
 	elseif self.db.profile.timing.faerieFireWild == "ready" and Spell:IsReady("精灵之火（野性）") then
 		-- 当法术就绪时：骗节能
 		CastSpellByName("精灵之火（野性）")
-	elseif self.db.profile.timing.faerieFireWild == "none" and not Effect:FindName("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
+	elseif self.db.profile.timing.faerieFireWild == "none" and not Buff:GetUnit("精灵之火", "target") and Spell:IsReady("精灵之火（野性）") then
 		-- 当目标无精灵之火时：减护甲
 		CastSpellByName("精灵之火（野性）")
 	else
