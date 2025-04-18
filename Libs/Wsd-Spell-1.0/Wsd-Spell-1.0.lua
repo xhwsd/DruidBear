@@ -1,6 +1,6 @@
 --[[
 Name: Wsd-Spell-1.0
-Revision: $Rev: 10004 $
+Revision: $Rev: 10005 $
 Author(s): 树先生 (xhwsd@qq.com)
 Website: https://github.com/xhwsd
 Description: 法术相关操作库。
@@ -10,7 +10,7 @@ Dependencies: AceLibrary, SpellCache-1.0
 -- 主要版本
 local MAJOR_VERSION = "Wsd-Spell-1.0"
 -- 次要版本
-local MINOR_VERSION = "$Revision: 10004 $"
+local MINOR_VERSION = "$Revision: 10005 $"
 
 -- 检验AceLibrary
 if not AceLibrary then
@@ -50,30 +50,6 @@ local SpellCache = AceLibrary("SpellCache-1.0")
 ---@class Wsd-Spell-1.0
 local Library = {}
 
--- 刷新法术
-local function refreshSpell(self)
-	-- 取法术插槽索引
-	-- 使用 SpellCache:GetSpellData("扫击(等级 3)") 得到是 id 是有误的
-	self.spells = {}
-	local index = 1
-	while true do
-		local name, rank = GetSpellName(index, BOOKTYPE_SPELL)
-		if not name then
-			break
-		end
-
-		if not self.spells[name] then
-			self.spells[name] = {}
-		end
-
-		table.insert(self.spells[name], {
-			rank = rank,
-			index = index
-		})
-		index = index + 1
-	end
-end
-
 -- 库激活
 ---@param self table 库自身对象
 ---@param oldLib table 旧版库对象
@@ -86,9 +62,6 @@ local function activate(self, oldLib, oldDeactivate)
 	if oldLib then
 		-- ...
 	end
-
-	-- 新版本初始化
-	refreshSpell(self)
 
 	-- 旧版本停用
 	if oldDeactivate then
@@ -116,11 +89,38 @@ function Library:AutoAttack()
 	end
 end
 
+-- 刷新法术数据
+---@param force? boolean 强制；无视已有数据重新准备数据
+function Library:refreshData(force)
+	force = force or false
+	if force or not self.spells or next(self.spells) == nil then
+		self.spells = {}
+		local index = 1
+		while true do
+			local name, rank = GetSpellName(index, BOOKTYPE_SPELL)
+			if not name then
+				break
+			end
+
+			if not self.spells[name] then
+				self.spells[name] = {}
+			end
+
+			table.insert(self.spells[name], {
+				rank = rank,
+				index = index
+			})
+			index = index + 1
+		end
+	end
+end
+
 -- 取指定等级法术数据
 ---@param name string 法术名称
 ---@param rank? number 法术等级；缺省为最高等级
 ---@return number spellIndex 成功返回法术索引，否则返回空
 function Library:GetData(name, rank)
+	self:refreshData()
 	if name and self.spells[name] then
 		if rank then
 			-- 取指定等级
