@@ -118,7 +118,7 @@ end
 -- 取指定等级法术数据
 ---@param name string 法术名称
 ---@param rank? number 法术等级；缺省为最高等级
----@return number spellIndex 成功返回法术索引，否则返回空
+---@return table data 成功返回法术数据，否则返回空
 function Library:GetData(name, rank)
 	self:refreshData()
 	if name and self.spells[name] then
@@ -232,5 +232,5 @@ end
 
 -- 最终注册库
 AceLibrary:Register(Library, MAJOR_VERSION, MINOR_VERSION, activate, nil, external)
----@diagnostic disable-next-line: cast-local-type
+---@diagnostic disable-next-line
 Library = nil

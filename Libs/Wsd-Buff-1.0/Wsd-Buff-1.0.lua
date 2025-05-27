@@ -1,6 +1,6 @@
 --[[
 Name: Wsd-Buff-1.0
-Revision: $Rev: 10001 $
+Revision: $Rev: 10002 $
 Author(s): 树先生 (xhwsd@qq.com)
 Website: https://github.com/xhwsd
 Description: 效果相关操作库。
@@ -10,7 +10,7 @@ Dependencies: AceLibrary
 -- 主要版本
 local MAJOR_VERSION = "Wsd-Buff-1.0"
 -- 次要版本
-local MINOR_VERSION = "$Revision: 10001 $"
+local MINOR_VERSION = "$Revision: 10002 $"
 
 -- 检验AceLibrary
 if not AceLibrary then
@@ -63,8 +63,8 @@ end
 -- GameTooltip模板 https://warcraft.wiki.gg/wiki/XML/GameTooltip
 local WsdBuffTooltip = CreateFrame("GameTooltip", "WsdBuffTooltip", nil, "GameTooltipTemplate")
 
--- 取单位效果信息
----@param name string 效果名称
+-- 查找单位效果
+---@param name string 效果名称；支持模式表达式
 ---@param unit? string 预取单位；额外还支持`mainhand`、`offhand`；缺省为`player`
 ---@return string kind 效果类型；可选值：`mainhand`、`offhand`、`buff`、`debuff`
 ---@return number index 效果索引；从1开始
@@ -72,12 +72,12 @@ local WsdBuffTooltip = CreateFrame("GameTooltip", "WsdBuffTooltip", nil, "GameTo
 ---@return string texture 纹理路径
 ---@return number applications 应用层数；仅在`buff`、`debuff`时有效
 ---@return string dispelType 驱散类型；仅在`debuff`时有效
-function Library:GetUnit(name, unit)
-	unit = unit or "player"
+function Library:FindUnit(name, unit)
 	if not name then
 		return
 	end
 
+	unit = unit or "player"
 	WsdBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 	-- 适配单位
@@ -132,14 +132,18 @@ function Library:GetUnit(name, unit)
 	end
 end
 
--- 取自身效果信息
----@param name string 效果名称
+-- 查找自身效果
+---@param name string 效果名称；支持模式表达式
 ---@return number index 效果索引；从1开始
 ---@return string text 效果文本
 ---@return number timeleft 效果剩余时间
 ---@return string texture 效果图标
 ---@return number cancelled 直到取消（如光环、形态、影身）
-function Library:GetPlayer(name)
+function Library:FindPlayer(name)
+	if not name then
+		return
+	end
+	
 	WsdBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 	for id = 0, 64 do
 		-- https://warcraft.wiki.gg/wiki/API_GetPlayerBuff?oldid=3951140
@@ -169,5 +173,5 @@ end
 
 -- 最终注册库
 AceLibrary:Register(Library, MAJOR_VERSION, MINOR_VERSION, activate, nil, external)
----@diagnostic disable-next-line: cast-local-type
+---@diagnostic disable-next-line
 Library = nil

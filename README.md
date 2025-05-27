@@ -3,10 +3,11 @@
 > __自娱自乐，不做任何保证！__  
 > 如遇到BUG可反馈至 xhwsd@qq.com 邮箱
 
-![功能预览](Preview.png)
-
 
 ## 功能
+
+![功能预览](Preview.png)
+
 - 可视化设置
 - 无脑一键
 - 施放通报
@@ -57,5 +58,12 @@
 - 会在怒气太多时使用野蛮撕咬
 
 
-## 参考天赋
+## 参考
+
+### 天赋
 [![跳转至天赋模拟器](Talent.png)](https://talents.turtle-wow.org/druid?points=BgAaAIAAAAAAAAFAYYRYDSAKFQBAAoAAAAAAAAAAAAA=)
+
+
+### 文档
+- [熊T拉怪思路+熊免暴流、躲闪血甲流、团本前、各阶段配装、火抗、其他抗性配装思路、天赋、宏分享](https://luntan.turtle-wow.org/viewtopic.php?t=194)
+- [【一键宏】熊德](https://luntan.turtle-wow.org/viewtopic.php?t=943)
