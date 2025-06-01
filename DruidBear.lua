@@ -23,7 +23,7 @@ local Tablet = AceLibrary("Tablet-2.0")
 -- 法术状态
 local SpellStatus = AceLibrary("SpellStatus-1.0")
 -- 光环事件
-local AuraEvents = AceLibrary("SpecialEvents-Aura-2.0")
+local AuraEvent = AceLibrary("SpecialEvents-Aura-2.0")
 -- 日志解析
 local ParserLib = ParserLib:GetInstance("1.1")
 
