@@ -1,6 +1,6 @@
 --[[
 Name: Wsd-Spell-1.0
-Revision: $Rev: 10006 $
+Revision: $Rev: 10007 $
 Author(s): 树先生 (xhwsd@qq.com)
 Website: https://github.com/xhwsd
 Description: 法术相关操作库。
@@ -10,7 +10,7 @@ Dependencies: AceLibrary, SpellCache-1.0
 -- 主要版本
 local MAJOR_VERSION = "Wsd-Spell-1.0"
 -- 次要版本
-local MINOR_VERSION = "$Revision: 10006 $"
+local MINOR_VERSION = "$Revision: 10007 $"
 
 -- 检验AceLibrary
 if not AceLibrary then
@@ -82,77 +82,60 @@ end
 -- 提示帧
 local WsdSpellTooltip = CreateFrame("GameTooltip", "WsdSpellTooltip", UIParent, "GameTooltipTemplate")
 
--- 刷新法术数据
----@param force? boolean 强制；无视已有数据重新准备数据
-function Library:refreshData(force)
-	force = force or false
-	if force or not self.spells or next(self.spells) == nil then
-		self.spells = {}
-		local index = 1
-		while true do
-			local name, rank = GetSpellName(index, BOOKTYPE_SPELL)
-			if not name then
-				break
-			end
-
-			if not self.spells[name] then
-				self.spells[name] = {}
-			end
-
-			table.insert(self.spells[name], {
-				rank = rank,
-				index = index
-			})
-			index = index + 1
-		end
-	end
-end
-
--- 取指定等级法术数据
----@param name string 法术名称
----@param rank? number 法术等级；缺省为最高等级
----@return table data 成功返回法术数据，否则返回空
-function Library:GetData(name, rank)
-	self:refreshData()
-	if name and self.spells[name] then
-		if rank then
-			-- 取指定等级
-			if self.spells[name][rank] then
-				return self.spells[name][rank]
-			end
-		else
-			-- 取最高等级
-			local max = table.getn(self.spells[name])
-			return self.spells[name][max]
-		end
-	end
-end
-
 -- 法术名称到索引
 ---@param name string 法术名称
 ---@param rank? number 法术等级；缺省为最高等级
 ---@return number index 成功返回法术索引，否则返回空
 function Library:ToIndex(name, rank)
-	local data = self:GetData(name, rank)
-	if data then
-		return data.index
+	local index = 1
+	local last = nil
+	while true do
+		-- 取法术名称
+		local spellName, spellRank = GetSpellName(index, BOOKTYPE_SPELL)
+		if not spellName or spellName == "" or spellName == "充能点" then
+			-- 可能是最后一个法术
+			if not rank and last then
+				-- 返回最高等级法术索引
+				return last
+			end
+
+			-- 已到末尾
+			break
+		end
+
+		-- 比对名称
+		if name == spellName then
+			-- 比对等级
+			if rank then
+				if spellRank == "等级 " .. rank then
+					return index
+				end
+			else
+				last = index
+			end
+		elseif not rank and last then
+			-- 返回最高等级法术索引
+			return last
+		end
+
+		-- 索引递增
+		index = index + 1
 	end
 end
 
--- 取法术的冷却时间
+-- 取法术冷却
 ---@param name string 法术名称
 ---@return number start 冷却开始时间
 ---@return number duration 冷却时间
 ---@return number enabled 是否启用冷却
 function Library:GetCooldown(name)
-	-- 名称到索引
 	local index = self:ToIndex(name)
 	if index then
 		return GetSpellCooldown(index, BOOKTYPE_SPELL)
 	end
 end
 
--- 检验法术的冷却时间是否结束
+-- 检验法术是否无冷却
 ---@param name string 法术名称
 ---@return boolean ready 已就绪返回真，否则返回假
 function Library:IsReady(name)
@@ -189,7 +172,7 @@ function Library:ParseDuration(index, patterns)
 			for _, pattern in ipairs(patterns) do
 				local _, _, duration = string.find(text, pattern)
 				if duration then
-					---@diagnostic disable-next-line: return-type-mismatch
+					---@diagnostic disable-next-line
 					return tonumber(duration)
 				end
 			end
