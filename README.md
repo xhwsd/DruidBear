@@ -1,4 +1,6 @@
 # 熊德辅助插件
+> 如有建议或BUG请至[ku-ba/DruidBear](https://gitee.com/ku-ba/DruidBear)代码库提交问题！
+
 
 ![功能预览](Preview.png)
 
