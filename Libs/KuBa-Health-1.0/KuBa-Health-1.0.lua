@@ -1,14 +1,14 @@
 --[[
-Name: Wsd-Health-1.0
+Name: KuBa-Health-1.0
 Revision: $Rev: 10001 $
 Author(s): 树先生 (xhwsd@qq.com)
-Website: https://github.com/xhwsd
+Website: https://gitee.com/ku-ba
 Description: 单位生命值相关库。
 Dependencies: AceLibrary
 ]]
 
 -- 主要版本
-local MAJOR_VERSION = "Wsd-Health-1.0"
+local MAJOR_VERSION = "KuBa-Health-1.0"
 -- 次要版本
 local MINOR_VERSION = "$Revision: 10001 $"
 
@@ -23,7 +23,7 @@ if not AceLibrary:IsNewVersion(MAJOR_VERSION, MINOR_VERSION) then
 end
 
 -- 单位生命值相关库。
----@class Wsd-Health-1.0
+---@class KuBa-Health-1.0
 local Library = {}
 
 -- 库激活

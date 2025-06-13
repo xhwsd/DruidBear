@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: DruidBear
-## Title-zhCN: |CFF33AAFF[Wsd]|R熊德 v2.1.4
+## Title-zhCN: |CFF33AAFF[库巴]|R熊德 v2.1.4
 ## Notes-zhCN: 适配乌龟服的熊德辅助插件
 ## Author: 树先生(xhwsd@qq.com)
 ## Version: 2.1.4
@@ -12,10 +12,10 @@ Libs\ParserLib\optimizer-zhCN.lua
 Libs\ParserLib\FixGlobalString.lua
 Libs\ParserLib\ParserLib.lua
 
-Libs\Wsd-Chat-1.0\Wsd-Chat-1.0.lua
-Libs\Wsd-Buff-1.0\Wsd-Buff-1.0.lua
-Libs\Wsd-Health-1.0\Wsd-Health-1.0.lua
-Libs\Wsd-Spell-1.0\Wsd-Spell-1.0.lua 
+Libs\KuBa-Chat-1.0\KuBa-Chat-1.0.lua
+Libs\KuBa-Buff-1.0\KuBa-Buff-1.0.lua
+Libs\KuBa-Health-1.0\KuBa-Health-1.0.lua
+Libs\KuBa-Spell-1.0\KuBa-Spell-1.0.lua 
 
 DruidBear.lua
 Helper.lua

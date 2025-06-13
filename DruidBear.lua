@@ -27,14 +27,14 @@ local AuraEvent = AceLibrary("SpecialEvents-Aura-2.0")
 -- 日志解析
 local ParserLib = ParserLib:GetInstance("1.1")
 
----@type Wsd-Health-1.0
-local Health = AceLibrary("Wsd-Health-1.0")
----@type Wsd-Buff-1.0
-local Buff = AceLibrary("Wsd-Buff-1.0")
----@type Wsd-Spell-1.0
-local Spell = AceLibrary("Wsd-Spell-1.0")
----@type Wsd-Chat-1.0
-local Chat = AceLibrary("Wsd-Chat-1.0")
+---@type KuBa-Health-1.0
+local Health = AceLibrary("KuBa-Health-1.0")
+---@type KuBa-Buff-1.0
+local Buff = AceLibrary("KuBa-Buff-1.0")
+---@type KuBa-Spell-1.0
+local Spell = AceLibrary("KuBa-Spell-1.0")
+---@type KuBa-Chat-1.0
+local Chat = AceLibrary("KuBa-Chat-1.0")
 
 -- 插件载入
 function DruidBear:OnInitialize()

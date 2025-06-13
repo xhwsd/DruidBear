@@ -1,16 +1,16 @@
 --[[
-Name: Wsd-Buff-1.0
-Revision: $Rev: 10002 $
+Name: KuBa-Buff-1.0
+Revision: $Rev: 10003 $
 Author(s): 树先生 (xhwsd@qq.com)
-Website: https://github.com/xhwsd
+Website: https://gitee.com/ku-ba
 Description: 效果相关操作库。
 Dependencies: AceLibrary
 ]]
 
 -- 主要版本
-local MAJOR_VERSION = "Wsd-Buff-1.0"
+local MAJOR_VERSION = "KuBa-Buff-1.0"
 -- 次要版本
-local MINOR_VERSION = "$Revision: 10002 $"
+local MINOR_VERSION = "$Revision: 10003 $"
 
 -- 检验AceLibrary
 if not AceLibrary then
@@ -23,7 +23,7 @@ if not AceLibrary:IsNewVersion(MAJOR_VERSION, MINOR_VERSION) then
 end
 
 -- 效果相关操作库。
----@class Wsd-Buff-1.0
+---@class KuBa-Buff-1.0
 local Library = {}
 
 -- 库激活
@@ -61,7 +61,7 @@ end
 -- 提示帧
 -- GameTooltip方法 https://warcraft.wiki.gg/wiki/Special:PrefixIndex/API_GameTooltip
 -- GameTooltip模板 https://warcraft.wiki.gg/wiki/XML/GameTooltip
-local WsdBuffTooltip = CreateFrame("GameTooltip", "WsdBuffTooltip", nil, "GameTooltipTemplate")
+local KuBaBuffTooltip = CreateFrame("GameTooltip", "KuBaBuffTooltip", nil, "GameTooltipTemplate")
 
 -- 查找单位效果
 ---@param name string 效果名称；支持模式表达式
@@ -78,16 +78,16 @@ function Library:FindUnit(name, unit)
 	end
 
 	unit = unit or "player"
-	WsdBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	KuBaBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 	-- 适配单位
 	if string.lower(unit) == "mainhand" then
 		-- 主手
 		local id, texture = GetInventorySlotInfo("MainHandSlot")
-		WsdBuffTooltip:ClearLines()
-		WsdBuffTooltip:SetInventoryItem("player", id);
-		for index = 1, WsdBuffTooltip:NumLines() do
-			local text = getglobal("WsdBuffTooltipTextLeft" .. index):GetText() or ""
+		KuBaBuffTooltip:ClearLines()
+		KuBaBuffTooltip:SetInventoryItem("player", id);
+		for index = 1, KuBaBuffTooltip:NumLines() do
+			local text = getglobal("KuBaBuffTooltipTextLeft" .. index):GetText() or ""
 			if string.find(text, name) then
 				return "mainhand", index, text, texture
 			end
@@ -95,10 +95,10 @@ function Library:FindUnit(name, unit)
 	elseif string.lower(unit) == "offhand" then
 		-- 副手
 		local id, texture = GetInventorySlotInfo("SecondaryHandSlot")
-		WsdBuffTooltip:ClearLines()
-		WsdBuffTooltip:SetInventoryItem("player", id)
-		for index = 1, WsdBuffTooltip:NumLines() do
-			local text = getglobal("WsdBuffTooltipTextLeft" .. index):GetText() or ""
+		KuBaBuffTooltip:ClearLines()
+		KuBaBuffTooltip:SetInventoryItem("player", id)
+		for index = 1, KuBaBuffTooltip:NumLines() do
+			local text = getglobal("KuBaBuffTooltipTextLeft" .. index):GetText() or ""
 			if string.find(text, name) then
 				return "offhand", index, text, texture
 			end
@@ -107,9 +107,9 @@ function Library:FindUnit(name, unit)
 		-- 增益
 		local index = 1
 		while UnitBuff(unit, index) do
-			WsdBuffTooltip:ClearLines()
-			WsdBuffTooltip:SetUnitBuff(unit, index)
-			local text = WsdBuffTooltipTextLeft1:GetText() or ""
+			KuBaBuffTooltip:ClearLines()
+			KuBaBuffTooltip:SetUnitBuff(unit, index)
+			local text = KuBaBuffTooltipTextLeft1:GetText() or ""
 			if string.find(text, name) then
 				local texture, applications = UnitBuff(unit, index)
 				return "buff", index, text, texture, applications
@@ -120,9 +120,9 @@ function Library:FindUnit(name, unit)
 		-- 减益
 		index = 1
 		while UnitDebuff(unit, index) do
-			WsdBuffTooltip:ClearLines()
-			WsdBuffTooltip:SetUnitDebuff(unit, index)
-			local text = WsdBuffTooltipTextLeft1:GetText() or ""
+			KuBaBuffTooltip:ClearLines()
+			KuBaBuffTooltip:SetUnitDebuff(unit, index)
+			local text = KuBaBuffTooltipTextLeft1:GetText() or ""
 			if string.find(text, name) then
 				local texture, applications, dispelType = UnitDebuff(unit, index)
 				return "debuff", index, text, texture, applications, dispelType
@@ -144,16 +144,16 @@ function Library:FindPlayer(name)
 		return
 	end
 	
-	WsdBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	KuBaBuffTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 	for id = 0, 64 do
 		-- https://warcraft.wiki.gg/wiki/API_GetPlayerBuff?oldid=3951140
 		local index, cancelled = GetPlayerBuff(id)
 		-- TODO: 无法确认这里是否从1开始 xhwsd 2025-4-4
 		if index >= 0 then
-			WsdBuffTooltip:ClearLines()
+			KuBaBuffTooltip:ClearLines()
 			-- https://warcraft.wiki.gg/wiki/API_GameTooltip_SetPlayerBuff?oldid=323371
-			WsdBuffTooltip:SetPlayerBuff(index)
-			local text = WsdBuffTooltipTextLeft1:GetText() or ""
+			KuBaBuffTooltip:SetPlayerBuff(index)
+			local text = KuBaBuffTooltipTextLeft1:GetText() or ""
 			if string.find(text, name) then
 				-- https://warcraft.wiki.gg/wiki/API_GetPlayerBuffTimeLeft?oldid=2250730
 				local timeleft = GetPlayerBuffTimeLeft(index)

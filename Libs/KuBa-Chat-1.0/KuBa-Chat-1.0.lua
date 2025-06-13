@@ -1,14 +1,14 @@
 --[[
-Name: Wsd-Chat-1.0
+Name: KuBa-Chat-1.0
 Revision: $Rev: 10002 $
 Author(s): 树先生 (xhwsd@qq.com)
-Website: https://github.com/xhwsd
+Website:https://gitee.com/ku-ba
 Description: 聊天相关库。
 Dependencies: AceLibrary
 ]]
 
 -- 主要版本
-local MAJOR_VERSION = "Wsd-Chat-1.0"
+local MAJOR_VERSION = "KuBa-Chat-1.0"
 -- 次要版本
 local MINOR_VERSION = "$Revision: 10002 $"
 
@@ -23,7 +23,7 @@ if not AceLibrary:IsNewVersion(MAJOR_VERSION, MINOR_VERSION) then
 end
 
 -- 聊天相关库。
----@class Wsd-Chat-1.0
+---@class KuBa-Chat-1.0
 local Library = {}
 
 -- 库激活
