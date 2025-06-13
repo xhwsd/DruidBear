@@ -1,11 +1,11 @@
 # 熊德辅助插件
-> 如有建议或BUG请至[ku-ba/DruidBear](https://gitee.com/ku-ba/DruidBear)代码库提交问题！
-
-
-![功能预览](Preview.png)
+> 如有建议或BUG请至[ku-ba/DruidBear](https://gitee.com/ku-ba/DruidBear)代码库[提交问题](https://gitee.com/ku-ba/DruidBear/issues)！
 
 
 ## 功能
+![功能预览](Preview.png)
+
+
 - 可视化设置
 - 无脑一键
 - 施放通报
