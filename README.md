@@ -1,3 +1,6 @@
+> 已不再维护，请使用可视化通用[一键宏](https://gitee.com/ku-ba/OneClickMacro)插件 2025-9-2 xhwsd@qq.com
+
+
 # 熊德辅助插件
 > 如有建议或BUG请至[ku-ba/DruidBear](https://gitee.com/ku-ba/DruidBear)代码库[提交问题](https://gitee.com/ku-ba/DruidBear/issues)！
 
